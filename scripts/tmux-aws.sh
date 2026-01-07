@@ -4,6 +4,12 @@ _tmux_aws_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=core.sh
 source "$_tmux_aws_source_dir/core.sh"
 
+# Get tmux window color based on AWS environment
+#
+# Arguments:
+#   $1 - AWS environment name (e.g., "dev", "stage", "prod")
+# Outputs:
+#   Tmux color variable name (e.g., "@thm_yellow")
 _tmux_get_window_color() {
 	local aws_environment="$1"
 
@@ -25,19 +31,18 @@ _tmux_get_window_color() {
 	echo "$window_color"
 }
 
-_tmux_get_window_name() {
-	local aws_profile="$1"
-
-	local aws_region
-	aws_region="$(_aws_get_option "$aws_profile" "region" "us-east-1")"
-
-	local aws_account_id
-	aws_account_id="$(_aws_get_option "$aws_profile" "sso_account_id" "none")"
-
-	echo "$aws_account_id-$aws_region"
-}
-
-_tmux_new_window() {
+# Create a new tmux window configured for an AWS profile
+#
+# Arguments:
+#   $1 - AWS profile name
+# Create a new tmux window configured for an AWS profile
+#
+# Arguments:
+#   $1 - AWS profile name
+# Side effects:
+#   Creates a new tmux window, sets its name based on AWS account ID and region,
+#   sets its color based on AWS environment, and selects the new window.
+_tmux_window() {
 	local aws_profile="$1"
 
 	local aws_environment
@@ -46,29 +51,22 @@ _tmux_new_window() {
 	local window_color
 	window_color="$(_tmux_get_window_color "$aws_environment")"
 
-	local window_name
-	window_name="$(_tmux_get_window_name "$aws_profile")"
-
 	local window_id
-	window_id="$(tmux new-window -d -P -F '#{window_id}' -n "$window_name")"
+	window_id="$(tmux display -p '#{window_id}')"
 
 	tmux set-window-option -t "$window_id" @AWS_PROFILE "$aws_profile"
 	# Style active window with environment-specific color, text, and AWS icon
 	tmux set-window-option -t "$window_id" window-status-current-format "#[fg=#{@thm_bg},bg=#{${window_color}}] #I:   #W #F "
 	# Style inactive window with environment-specific color and AWS icon
 	tmux set-window-option -t "$window_id" window-status-format "#[fg=#{${window_color}},bg=#{@thm_bg}] #I:   #W #F "
-	# Select the newly created window
-	tmux select-window -t "$window_id"
 }
-
-_tmux_new_window "$@"
 
 main() {
 	# Command router
 	case "${1:-}" in
-	new-window)
+	--profile)
 		shift
-		_tmux_new_window "$1"
+		_tmux_window "$1"
 		;;
 	esac
 }
