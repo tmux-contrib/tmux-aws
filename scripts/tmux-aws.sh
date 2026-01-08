@@ -55,10 +55,12 @@ _tmux_window() {
 	window_id="$(tmux display -p '#{window_id}')"
 
 	tmux set-window-option -t "$window_id" @AWS_PROFILE "$aws_profile"
-	# Style active window with environment-specific color, text, and AWS icon
-	tmux set-window-option -t "$window_id" window-status-current-format "#[fg=#{@thm_bg},bg=#{${window_color}}] #I:   #W #F "
-	# Style inactive window with environment-specific color and AWS icon
-	tmux set-window-option -t "$window_id" window-status-format "#[fg=#{${window_color}},bg=#{@thm_bg}] #I:   #W #F "
+	# Windows Styles
+	tmux set-window-option -F -t "$window_id" window-status-style "fg=#{${window_color}},bg=#{@thm_bg}"
+	tmux set-window-option -F -t "$window_id" window-status-current-style "fg=#{@thm_bg},bg=#{${window_color}"
+	# Window Formats
+	tmux set-window-option -t "$window_id" window-status-format " #I:   #W #F "
+	tmux set-window-option -t "$window_id" window-status-current-format " #I:   #W #F "
 }
 
 main() {
