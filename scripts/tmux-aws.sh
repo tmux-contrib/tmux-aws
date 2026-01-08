@@ -58,6 +58,9 @@ _tmux_window() {
 	# Windows Styles
 	tmux set-window-option -F -t "$window_id" window-status-style "fg=#{${window_color}},bg=#{@thm_bg},nobold"
 	tmux set-window-option -F -t "$window_id" window-status-current-style "fg=#{@thm_bg},bg=#{${window_color}},nobold"
+	tmux set-window-option -F -t "$window_id" window-status-bell-style "fg=#{${window_color}},bg=#{@thm_bg}"
+	tmux set-window-option -F -t "$window_id" window-status-activity-style "fg=#{${window_color}},bg=#{@thm_bg},italics"
+
 	# Window Formats
 	tmux set-window-option -t "$window_id" window-status-format " #I:   #W #F "
 	tmux set-window-option -t "$window_id" window-status-current-format " #I:   #W #F "
