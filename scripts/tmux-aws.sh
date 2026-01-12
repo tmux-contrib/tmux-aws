@@ -35,15 +35,14 @@ _tmux_get_window_color() {
 #
 # Arguments:
 #   $1 - AWS profile name
-# Create a new tmux window configured for an AWS profile
-#
-# Arguments:
-#   $1 - AWS profile name
+#   $2 - (Optional) Target window in format "session:index" (e.g., "mysession:0")
+#        If not provided, defaults to the current window
 # Side effects:
-#   Creates a new tmux window, sets its name based on AWS account ID and region,
-#   sets its color based on AWS environment, and selects the new window.
+#   Sets window styling and variables for the specified or current window
+#   based on the AWS profile's environment configuration.
 _tmux_window() {
 	local aws_profile="$1"
+	local aws_window="${2:-}"
 
 	local aws_environment
 	aws_environment="$(_aws_get_option "$aws_profile" "environment" "none")"
@@ -51,29 +50,49 @@ _tmux_window() {
 	local window_color
 	window_color="$(_tmux_get_window_color "$aws_environment")"
 
-	local window_id
-	window_id="$(tmux display -p '#{window_id}')"
+	if [[ -z "$aws_window" ]]; then
+		# Auto-detect current window (backward compatible)
+		aws_window="$(tmux display -p '#{session_name}:#{window_index}')"
+	fi
 
-	tmux set-window-option -t "$window_id" @AWS_PROFILE "$aws_profile"
+	tmux set-window-option -t "$aws_window" @AWS_PROFILE "$aws_profile"
 	# Windows Styles
-	tmux set-window-option -F -t "$window_id" window-status-style "fg=#{${window_color}},bg=#{@thm_bg},nobold"
-	tmux set-window-option -F -t "$window_id" window-status-current-style "fg=#{@thm_bg},bg=#{${window_color}},nobold"
-	tmux set-window-option -F -t "$window_id" window-status-bell-style "fg=#{${window_color}},bg=#{@thm_bg}"
-	tmux set-window-option -F -t "$window_id" window-status-activity-style "fg=#{${window_color}},bg=#{@thm_bg},italics"
+	tmux set-window-option -F -t "$aws_window" window-status-style "fg=#{${window_color}},bg=#{@thm_bg},nobold"
+	tmux set-window-option -F -t "$aws_window" window-status-current-style "fg=#{@thm_bg},bg=#{${window_color}},nobold"
+	tmux set-window-option -F -t "$aws_window" window-status-bell-style "fg=#{${window_color}},bg=#{@thm_bg}"
+	tmux set-window-option -F -t "$aws_window" window-status-activity-style "fg=#{${window_color}},bg=#{@thm_bg},italics"
 
 	# Window Formats
-	tmux set-window-option -t "$window_id" window-status-format " #I:   #W #F "
-	tmux set-window-option -t "$window_id" window-status-current-format " #I:   #W #F "
+	tmux set-window-option -t "$aws_window" window-status-format " #I:   #W #F "
+	tmux set-window-option -t "$aws_window" window-status-current-format " #I:   #W #F "
 }
 
 main() {
 	# Command router
-	case "${1:-}" in
-	--profile)
-		shift
-		_tmux_window "$1"
-		;;
-	esac
+	local aws_profile=""
+	local aws_window=""
+
+	while [[ $# -gt 0 ]]; do
+		case "${1}" in
+		--profile)
+			shift
+			aws_profile="$1"
+			shift
+			;;
+		--target)
+			shift
+			aws_window="$1"
+			shift
+			;;
+		*)
+			shift
+			;;
+		esac
+	done
+
+	if [[ -n "$aws_profile" ]]; then
+		_tmux_window "$aws_profile" "$aws_window"
+	fi
 }
 
 main "$@"
