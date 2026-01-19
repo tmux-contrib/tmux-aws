@@ -4,10 +4,12 @@ A `tmux` plugin to style `tmux` windows based on an AWS profile.
 
 ## Dependencies
 
-This plugin depends on the following tools. Please make sure they are installed
-and available in your `PATH`:
-
+### Required
 - [aws-cli](https://aws.amazon.com/cli/)
+
+### Optional
+- [aws-fzf](https://github.com/aws-contrib/aws-fzf) - Enables interactive AWS profile selection
+- [tmux-fzf](https://github.com/sainnhe/tmux-fzf) - Integrates with unified fzf menu
 
 ## Installation
 
@@ -19,21 +21,57 @@ set -g @plugin 'tmux-contrib/tmux-aws'
 
 And install it by running `<prefix> + I`.
 
-## Usage
+### Optional: Interactive Profile Selection
 
-This plugin provides a script to style the current `tmux` window based on a
-specific AWS profile.
+For interactive AWS profile selection, install [aws-fzf](https://github.com/aws-contrib/aws-fzf):
 
-### Styling the Current Window
-
-You can call the `scripts/tmux-aws.sh` script with the `--profile` option and
-the desired profile name.
-
-```sh
-/path/to/tmux-aws/scripts/tmux-aws.sh --profile my-dev-profile
+```bash
+git clone https://github.com/aws-contrib/aws-fzf.git
+cd aws-fzf && make install
 ```
 
-This is useful for `tmux` plugins like [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum) which can save and restore your sessions. You can have it run this script to style your windows correctly on restore. You can also integrate it with other scripts to automatically style windows when you switch profiles.
+Once installed, tmux-aws will automatically enable interactive profile selection.
+
+## Usage
+
+### Interactive Profile Selection (with aws-fzf)
+
+When aws-fzf is installed, tmux-aws provides interactive AWS profile selection:
+
+**Standalone mode** (without tmux-fzf):
+- `Prefix + A` → Opens AWS profile picker
+
+**Unified fzf-menu mode** (with tmux-fzf):
+- `Prefix + f + a` → AWS profiles in unified fzf menu
+
+**Keybindings in picker:**
+- `Enter` → Select profile (displays profile info)
+- `alt-n` → Create new window with selected profile
+- `alt-N` → Create new session with selected profile
+
+**Configuration:**
+
+```tmux
+# Standalone binding (default: A)
+set -g @aws-prefix-key 'A'
+
+# Unified fzf-menu binding (default: a)
+set -g @fzf-aws-key 'a'
+```
+
+### Manual Profile Selection
+
+You can also call the `scripts/tmux_aws.sh` script directly with the `--profile` option:
+
+```sh
+# Create new window
+/path/to/tmux-aws/scripts/tmux_aws.sh new-window --profile my-dev-profile
+
+# Create new session
+/path/to/tmux-aws/scripts/tmux_aws.sh new-session --profile my-dev-profile
+```
+
+This is useful for integrating with other tools like [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum).
 
 ### Window Styling
 
