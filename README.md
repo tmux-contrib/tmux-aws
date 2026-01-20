@@ -38,11 +38,7 @@ Once installed, tmux-aws will automatically enable interactive profile selection
 
 When aws-fzf is installed, tmux-aws provides interactive AWS profile selection:
 
-**Standalone mode** (without tmux-fzf):
-- `Prefix + A` → Opens AWS profile picker
-
-**Unified fzf-menu mode** (with tmux-fzf):
-- `Prefix + f + a` → AWS profiles in unified fzf menu
+- `Prefix + f + a` → Opens AWS profile picker in fzf menu
 
 **Keybindings in picker:**
 - `Enter` → Select profile (displays profile info)
@@ -52,12 +48,14 @@ When aws-fzf is installed, tmux-aws provides interactive AWS profile selection:
 **Configuration:**
 
 ```tmux
-# Standalone binding (default: A)
-set -g @aws-prefix-key 'A'
+# fzf menu prefix key (default: f)
+set -g @fzf-prefix-key 'f'
 
-# Unified fzf-menu binding (default: a)
+# AWS picker key within fzf menu (default: a)
 set -g @fzf-aws-key 'a'
 ```
+
+**Note:** If you also have [tmux-fzf](https://github.com/sainnhe/tmux-fzf) installed, the AWS picker will be available alongside other fzf menu items (projects, sessions, etc.).
 
 ### Manual Profile Selection
 
