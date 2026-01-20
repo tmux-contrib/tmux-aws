@@ -42,8 +42,8 @@ When aws-fzf is installed, tmux-aws provides interactive AWS profile selection:
 
 **Keybindings in picker:**
 - `Enter` → Select profile (displays profile info)
-- `alt-n` → Create new window with selected profile
-- `alt-N` → Create new session with selected profile
+- `alt-c` → Create new window with selected profile
+- `alt-C` → Create new session with selected profile
 - `alt-s` → Authenticate current session with selected profile
 - `alt-w` → Authenticate current window with selected profile
 
