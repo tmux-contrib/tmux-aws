@@ -44,6 +44,8 @@ When aws-fzf is installed, tmux-aws provides interactive AWS profile selection:
 - `Enter` → Select profile (displays profile info)
 - `alt-n` → Create new window with selected profile
 - `alt-N` → Create new session with selected profile
+- `alt-s` → Authenticate current session with selected profile
+- `alt-w` → Authenticate current window with selected profile
 
 **Configuration:**
 
@@ -67,6 +69,12 @@ You can also call the `scripts/tmux_aws.sh` script directly with the `--profile`
 
 # Create new session
 /path/to/tmux-aws/scripts/tmux_aws.sh new-session --profile my-dev-profile
+
+# Authenticate current session
+/path/to/tmux-aws/scripts/tmux_aws.sh auth-session --profile my-dev-profile
+
+# Authenticate current window
+/path/to/tmux-aws/scripts/tmux_aws.sh auth-window --profile my-dev-profile
 ```
 
 This is useful for integrating with other tools like [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum).
