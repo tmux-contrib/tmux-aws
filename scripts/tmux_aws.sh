@@ -8,16 +8,21 @@ source "$_tmux_aws_source_dir/tmux_core.sh"
 
 # Get configured vault executable path
 _tmux_get_aws_vault_path() {
-	local vault_path
-	vault_path="$(tmux show-option -gqv @tmux-aws-vault-path)"
-	echo "${vault_path:-aws-vault}"
+	local aws_vault_path
+	aws_vault_path="$(tmux show-option -gqv @tmux-aws-vault-path)"
+	aws_vault_path="${aws_vault_path:-aws-vault}"
+
+	# Expand tilde to $HOME if path starts with ~/
+	aws_vault_path="${aws_vault_path/#\~/$HOME}"
+
+	echo "$aws_vault_path"
 }
 
 # Get environment variable regex pattern
 _tmux_get_aws_env_regex() {
-	local pattern
-	pattern="$(tmux show-option -gqv @tmux-aws-env-regex)"
-	echo "${pattern:-^AWS_}"
+	local aws_env_regex
+	aws_env_regex="$(tmux show-option -gqv @tmux-aws-env-regex)"
+	echo "${aws_env_regex:-^AWS_}"
 }
 
 # Get tmux color based on AWS environment
