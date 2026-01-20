@@ -177,15 +177,13 @@ _tmux_exec_session() {
 	local session_name
 	session_name="$(tmux display -p '#{session_name}')"
 
-	# Set session environment variables from current process environment
+	# Dynamically set all AWS_* environment variables in the tmux session
 	# These will be inherited by all windows/panes in the session
-	[[ -n "$AWS_VAULT" ]] && tmux set-environment -t "$session_name" AWS_VAULT "$AWS_VAULT"
-	[[ -n "$AWS_REGION" ]] && tmux set-environment -t "$session_name" AWS_REGION "$AWS_REGION"
-	[[ -n "$AWS_DEFAULT_REGION" ]] && tmux set-environment -t "$session_name" AWS_DEFAULT_REGION "$AWS_DEFAULT_REGION"
-	[[ -n "$AWS_ACCESS_KEY_ID" ]] && tmux set-environment -t "$session_name" AWS_ACCESS_KEY_ID "$AWS_ACCESS_KEY_ID"
-	[[ -n "$AWS_SECRET_ACCESS_KEY" ]] && tmux set-environment -t "$session_name" AWS_SECRET_ACCESS_KEY "$AWS_SECRET_ACCESS_KEY"
-	[[ -n "$AWS_SESSION_TOKEN" ]] && tmux set-environment -t "$session_name" AWS_SESSION_TOKEN "$AWS_SESSION_TOKEN"
-	[[ -n "$AWS_CREDENTIAL_EXPIRATION" ]] && tmux set-environment -t "$session_name" AWS_CREDENTIAL_EXPIRATION "$AWS_CREDENTIAL_EXPIRATION"
+	while IFS='=' read -r -d '' name value; do
+		if [[ "$name" =~ ^AWS_ ]]; then
+			tmux set-environment -t "$session_name" "$name" "$value"
+		fi
+	done < <(env -0)
 
 	# Set session option for status line integration
 	tmux set-option -t "$session_name" @AWS_PROFILE "$aws_profile"
