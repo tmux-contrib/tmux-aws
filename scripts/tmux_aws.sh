@@ -6,6 +6,20 @@ _tmux_aws_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=tmux_core.sh
 source "$_tmux_aws_source_dir/tmux_core.sh"
 
+# Get configured vault executable path
+_tmux_get_aws_vault_path() {
+	local vault_path
+	vault_path="$(tmux show-option -gqv @tmux-aws-vault-path)"
+	echo "${vault_path:-aws-vault}"
+}
+
+# Get environment variable regex pattern
+_tmux_get_aws_env_regex() {
+	local pattern
+	pattern="$(tmux show-option -gqv @tmux-aws-env-regex)"
+	echo "${pattern:-^AWS_}"
+}
+
 # Get tmux color based on AWS environment
 #
 # Arguments:
@@ -113,8 +127,20 @@ _tmux_auth_window() {
 		esac
 	done
 
-	# Use aws-vault exec to wrap and call exec-window
-	aws-vault exec "$aws_profile" -- "$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile"
+	# Get configured vault executable
+	local aws_vault_path
+	aws_vault_path="$(_tmux_get_aws_vault_path)"
+
+	# Check if vault executable exists
+	if ! command -v "$aws_vault_path" &>/dev/null; then
+		echo "ERROR: $aws_vault_path not found in PATH" >&2
+		echo "Configure with: set -g @tmux-aws-vault-path '<path>'" >&2
+		return 1
+	fi
+
+	# Use aws-vault-compatible interface: exec <profile> -- <command>
+	"$aws_vault_path" exec "$aws_profile" -- \
+		"$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile"
 }
 
 # Create a new tmux window with AWS profile configuration
@@ -177,10 +203,15 @@ _tmux_exec_session() {
 	local session_name
 	session_name="$(tmux display -p '#{session_name}')"
 
-	# Dynamically set all AWS_* environment variables in the tmux session
+	# Get environment variable regex from configuration
+	local aws_env_regex
+	aws_env_regex="$(_tmux_get_aws_env_regex)"
+
+	# Dynamically set environment variables matching the regex pattern
+	# This supports AWS_*, TF_*, HSDK_*, or any custom pattern
 	# These will be inherited by all windows/panes in the session
 	while IFS='=' read -r -d '' name value; do
-		if [[ "$name" =~ ^AWS_ ]]; then
+		if [[ "$name" =~ $aws_env_regex ]]; then
 			tmux set-environment -t "$session_name" "$name" "$value"
 		fi
 	done < <(env -0)
@@ -226,8 +257,20 @@ _tmux_auth_session() {
 		esac
 	done
 
-	# Use aws-vault exec to wrap and call exec-session
-	aws-vault exec "$aws_profile" -- "$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile"
+	# Get configured vault executable
+	local aws_vault_path
+	aws_vault_path="$(_tmux_get_aws_vault_path)"
+
+	# Check if vault executable exists
+	if ! command -v "$aws_vault_path" &>/dev/null; then
+		echo "ERROR: $aws_vault_path not found in PATH" >&2
+		echo "Configure with: set -g @tmux-aws-vault-path '<path>'" >&2
+		return 1
+	fi
+
+	# Use aws-vault-compatible interface: exec <profile> -- <command>
+	"$aws_vault_path" exec "$aws_profile" -- \
+		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile"
 }
 
 # Create a new tmux session with AWS profile configuration
