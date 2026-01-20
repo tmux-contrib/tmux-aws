@@ -224,16 +224,74 @@ _tmux_new_session() {
 	tmux switch-client -t "$session_name" 2>/dev/null || tmux attach -t "$session_name"
 }
 
+# Authenticate current tmux session with AWS profile configuration
+#
+# Arguments:
+#   --profile - AWS profile name
+# Side effects:
+#   Applies AWS credentials to the current session via aws-vault exec.
+#   The session is wrapped with aws-vault and all windows/panes will
+#   inherit AWS credentials at the session level.
+_tmux_auth_session() {
+	local aws_profile=""
+
+	while [[ $# -gt 0 ]]; do
+		case "${1}" in
+		--profile)
+			shift
+			aws_profile="$1"
+			shift
+			;;
+		*)
+			shift
+			;;
+		esac
+	done
+
+	# Use aws-vault exec to wrap and call exec-session
+	aws-vault exec "$aws_profile" -- "$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile"
+}
+
+# Authenticate current tmux window with AWS profile configuration
+#
+# Arguments:
+#   --profile - AWS profile name
+# Side effects:
+#   Applies AWS credentials to the current window via aws-vault exec.
+#   The window is wrapped with aws-vault and window styling is applied
+#   based on the AWS profile's environment configuration.
+_tmux_auth_window() {
+	local aws_profile=""
+
+	while [[ $# -gt 0 ]]; do
+		case "${1}" in
+		--profile)
+			shift
+			aws_profile="$1"
+			shift
+			;;
+		*)
+			shift
+			;;
+		esac
+	done
+
+	# Use aws-vault exec to wrap and call exec-window
+	aws-vault exec "$aws_profile" -- "$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile"
+}
+
 # Main command router
 #
 # Arguments:
-#   $1 - Command name (new-window, exec-window, new-session, exec-session)
+#   $1 - Command name (new-window, exec-window, new-session, exec-session, auth-session, auth-window)
 #   $@ - Command-specific arguments (passed to the respective function)
 # Commands:
 #   new-window   - Create a new tmux window with AWS profile configuration
 #   exec-window  - Execute an interactive shell in a styled tmux window
 #   new-session  - Create a new tmux session with AWS profile configuration
 #   exec-session - Execute an interactive shell in a styled tmux session
+#   auth-session - Authenticate current tmux session with AWS profile configuration
+#   auth-window  - Authenticate current tmux window with AWS profile configuration
 main() {
 	local command="${1:-}"
 	shift || true
@@ -250,6 +308,12 @@ main() {
 		;;
 	exec-session)
 		_tmux_exec_session "$@"
+		;;
+	auth-session)
+		_tmux_auth_session "$@"
+		;;
+	auth-window)
+		_tmux_auth_window "$@"
 		;;
 	esac
 }

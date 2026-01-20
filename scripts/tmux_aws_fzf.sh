@@ -18,4 +18,6 @@ fi
 aws fzf --tmux \
     --bind "alt-n:become($_source_dir/tmux_aws.sh new-window --profile {1})" \
     --bind "alt-N:become($_source_dir/tmux_aws.sh new-session --profile {1})" \
+    --bind "alt-w:become($_source_dir/tmux_aws.sh auth-window --profile {1})" \
+    --bind "alt-s:become($_source_dir/tmux_aws.sh auth-session --profile {1})" \
     sso profile list
