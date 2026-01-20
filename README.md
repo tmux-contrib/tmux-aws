@@ -5,9 +5,11 @@ A `tmux` plugin to style `tmux` windows based on an AWS profile.
 ## Dependencies
 
 ### Required
+
 - [aws-cli](https://aws.amazon.com/cli/)
 
 ### Optional
+
 - [aws-fzf](https://github.com/aws-contrib/aws-fzf) - Enables interactive AWS profile selection
 - [tmux-fzf](https://github.com/sainnhe/tmux-fzf) - Integrates with unified fzf menu
 
@@ -41,6 +43,7 @@ When aws-fzf is installed, tmux-aws provides interactive AWS profile selection:
 - `Prefix + f + a` → Opens AWS profile picker in fzf menu
 
 **Keybindings in picker:**
+
 - `Enter` → Select profile (displays profile info)
 - `alt-c` → Create new window with selected profile
 - `alt-C` → Create new session with selected profile
@@ -119,4 +122,70 @@ display the profile name in the status line:
 
 ```tmux
 set -g status-right '#{@AWS_PROFILE}'
+```
+
+## Configuration
+
+### Custom Credential Provider
+
+By default, tmux-aws uses [aws-vault](https://github.com/99designs/aws-vault) for credential management. You can configure a different tool that implements the aws-vault interface:
+
+```tmux
+# Use aws-vault (default)
+set -g @tmux-aws-vault-path 'aws-vault'
+
+# Use custom wrapper
+set -g @tmux-aws-vault-path 'my-vault-wrapper'
+```
+
+**aws-vault interface:** Any tool configured must implement this interface:
+
+```bash
+<tool> exec <profile> -- <command>
+```
+
+### Variable Capture Pattern
+
+Configure which environment variables to capture:
+
+```tmux
+# Capture only AWS_* variables (default)
+set -g @tmux-aws-env-regex '^AWS_'
+
+# Capture AWS_*, TF_*, and HSDK_* variables
+set -g @tmux-aws-env-regex '^(AWS_|TF_)'
+```
+
+### Example: AWS Vault Wrapper
+
+If you have a company tool like hsdk, create a wrapper script:
+
+```bash
+#!/bin/bash
+# /usr/local/bin/aws-vault.sh
+
+if [[ "$1" != "exec" ]]; then
+    echo "Usage: aws-vault.sh exec <profile> -- <command...>"
+    exit 1
+fi
+
+profile="$2"
+shift 3  # Skip 'exec', profile, '--'
+
+# Load credentials with hsdk
+# Your custom logic here
+
+# Execute the command
+exec "$@"
+```
+
+Make it executable and configure:
+
+```bash
+chmod +x /usr/local/bin/hsdk-vault
+```
+
+```tmux
+set -g @tmux-aws-vault-path 'aws-vault.sh'
+set -g @tmux-aws-env-regex '^(AWS_|TF_)'
 ```
