@@ -25,32 +25,6 @@ _tmux_get_aws_env_regex() {
 	echo "${aws_env_regex:-^AWS_}"
 }
 
-# Get tmux color based on AWS environment
-#
-# Arguments:
-#   $1 - AWS environment name (e.g., "dev", "stage", "prod")
-# Outputs:
-#   Tmux color variable name (e.g., "@thm_yellow")
-_tmux_get_color() {
-	local aws_environment="$1"
-
-	# Convert to lowercase for case-insensitive matching
-	local color="@thm_rosewater"
-	# Partial match against type
-	case "$aws_environment" in
-	*dev*)
-		color="@thm_yellow"
-		;;
-	*stage*)
-		color="@thm_peach"
-		;;
-	*prod*)
-		color="@thm_red"
-		;;
-	esac
-
-	echo "$color"
-}
 
 # Execute an interactive shell in a tmux window configured for an AWS profile
 #
@@ -59,8 +33,7 @@ _tmux_get_color() {
 #   --window - (Optional) Target window in format "session:index" (e.g., "mysession:0")
 #              If not provided, defaults to the current window
 # Side effects:
-#   Sets window styling and variables for the specified or current window
-#   based on the AWS profile's environment configuration, then launches an interactive shell.
+#   Sets window variable for the specified or current window, then launches an interactive shell.
 _tmux_exec_window() {
 	local aws_profile=""
 	local aws_window=""
@@ -83,27 +56,14 @@ _tmux_exec_window() {
 		esac
 	done
 
-	local aws_environment
-	aws_environment="$(_aws_get_option "$aws_profile" "environment" "none")"
-
-	local window_color
-	window_color="$(_tmux_get_color "$aws_environment")"
 
 	if [[ -z "$aws_window" ]]; then
 		# Auto-detect current window (backward compatible)
 		aws_window="$(tmux display -p '#{session_name}:#{window_index}')"
 	fi
 
-	tmux set-window-option -t "$aws_window" @AWS_PROFILE "$aws_profile"
-	# Windows Styles
-	tmux set-window-option -F -t "$aws_window" window-status-style "fg=#{${window_color}},bg=#{@thm_bg},nobold"
-	tmux set-window-option -F -t "$aws_window" window-status-current-style "fg=#{@thm_bg},bg=#{${window_color}},nobold"
-	tmux set-window-option -F -t "$aws_window" window-status-bell-style "fg=#{${window_color}},bg=#{@thm_bg}"
-	tmux set-window-option -F -t "$aws_window" window-status-activity-style "fg=#{${window_color}},bg=#{@thm_bg},italics"
-
-	# Window Formats
-	tmux set-window-option -t "$aws_window" window-status-format " #I:   #W #F "
-	tmux set-window-option -t "$aws_window" window-status-current-format " #I:   #W #F "
+	# Set window variable for user consumption
+	tmux set-window-option -t "$aws_window" @aws_profile "$aws_profile"
 
 	"$SHELL" -i
 }
@@ -114,8 +74,6 @@ _tmux_exec_window() {
 #   --profile - AWS profile name
 # Side effects:
 #   Applies AWS credentials to the current window via aws-vault exec.
-#   The window is wrapped with aws-vault and window styling is applied
-#   based on the AWS profile's environment configuration.
 _tmux_auth_window() {
 	local aws_profile=""
 
@@ -186,8 +144,8 @@ _tmux_new_window() {
 # Arguments:
 #   --profile - AWS profile name
 # Side effects:
-#   Sets session-level environment variables for AWS credentials, applies session styling
-#   based on the AWS profile's environment configuration, then launches an interactive shell.
+#   Sets session-level environment variables for AWS credentials and session variable,
+#   then launches an interactive shell.
 #   All future windows/panes created in this session will inherit the AWS credentials.
 _tmux_exec_session() {
 	local aws_profile=""
@@ -221,19 +179,9 @@ _tmux_exec_session() {
 		fi
 	done < <(env -0)
 
-	# Set session option for status line integration
-	tmux set-option -t "$session_name" @AWS_PROFILE "$aws_profile"
+	# Set session variable for user consumption
+	tmux set-option -t "$session_name" @aws_profile "$aws_profile"
 
-	# Apply session styling based on AWS environment
-	local aws_environment
-	aws_environment="$(_aws_get_option "$aws_profile" "environment" "none")"
-
-	local session_color
-	session_color="$(_tmux_get_color "$aws_environment")"
-
-	# Session Styles
-	tmux set-option -F -t "$session_name" session-status-style "fg=#{${session_color}},bg=#{@thm_bg}"
-	tmux set-option -F -t "$session_name" session-status-current-style "fg=#{@thm_bg},bg=#{${session_color}}"
 
 	"$SHELL" -i
 }

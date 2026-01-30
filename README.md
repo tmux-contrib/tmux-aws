@@ -1,12 +1,13 @@
 # tmux-aws
 
-A `tmux` plugin to style `tmux` windows based on an AWS profile.
+A `tmux` plugin that exposes AWS profile context as a tmux variable. Pure data passthrough - you control all styling and parsing.
 
 ## Dependencies
 
 ### Required
 
 - [aws-cli](https://aws.amazon.com/cli/)
+- [aws-vault](https://github.com/99designs/aws-vault) (or compatible credential provider)
 
 ### Optional
 
@@ -34,7 +35,36 @@ cd aws-fzf && make install
 
 Once installed, tmux-aws will automatically enable interactive profile selection.
 
-## Usage
+## Variables
+
+The plugin exposes one variable at both session and window levels:
+
+### @aws_profile
+
+The active AWS profile name (raw string, no processing).
+
+**Scope**: Set at both session-level and window-level, depending on which auth command you use:
+- `auth-session` or `new-session`: Sets session-level `@aws_profile`
+- `auth-window` or `new-window`: Sets window-level `@aws_profile`
+
+**Access**:
+```tmux
+# In status bar / window status (uses session-level by default)
+set -g status-right 'AWS: #{@aws_profile}'
+
+# Explicitly check window-level
+set -g window-status-format '#I:#W #{@aws_profile}'
+
+# In scripts / if-shell
+tmux show-option -gqv @aws_profile      # Session-level
+tmux show-window-option -qv @aws_profile # Window-level
+```
+
+**Precedence**: Window-level overrides session-level when checking from within a window context.
+
+## Commands
+
+All commands work unchanged from v1.x:
 
 ### Interactive Profile Selection (with aws-fzf)
 
@@ -82,46 +112,101 @@ You can also call the `scripts/tmux_aws.sh` script directly with the `--profile`
 
 This is useful for integrating with other tools like [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum).
 
-### Window Styling
+## Usage Examples
 
-The plugin automatically styles the `tmux` window status based on the
-`environment` tag of the selected profile.
+The plugin only sets `@aws_profile`. Here's how to use it for styling and parsing:
 
-It sets the `window-status-current-format` and `window-status-format` to
-display an AWS icon (``) and a color indicating the environment.
+### Example 1: Simple Status Bar
 
-### AWS Profile Configuration
-
-To enable environment-specific styling, add an `environment` tag to your
-profiles in `~/.aws/config`:
-
-```ini
-[profile my-dev-profile]
-environment = dev
-
-[profile my-stage-profile]
-environment = staging
-
-[profile my-prod-profile]
-environment = production
-```
-
-The script uses partial matching to determine the environment from this tag:
-
-- `dev`: yellow
-- `stage`: peach
-- `prod`: red
-
-If no matching environment is found, a default color is used.
-
-### Window Variable
-
-The plugin sets a window option `@AWS_PROFILE` with the name of the selected
-AWS profile. You can use this in your `tmux` configuration. For example, to
-display the profile name in the status line:
+Just show the profile:
 
 ```tmux
-set -g status-right '#{@AWS_PROFILE}'
+set -g status-right 'AWS: #{@aws_profile}'
+```
+
+### Example 2: Parse Environment from Profile Name
+
+Color status bar based on profile name patterns:
+
+```tmux
+# Red for production profiles
+if-shell '[ -n "$(tmux show-option -gqv @aws_profile | grep -i prod)" ]' \
+    'set -g status-style "fg=white,bg=red,bold"'
+
+# Yellow for dev profiles
+if-shell '[ -n "$(tmux show-option -gqv @aws_profile | grep -i dev)" ]' \
+    'set -g status-style "fg=black,bg=yellow"'
+
+# Orange for staging profiles
+if-shell '[ -n "$(tmux show-option -gqv @aws_profile | grep -i stage)" ]' \
+    'set -g status-style "fg=black,bg=colour208"'
+```
+
+### Example 3: Window Status with Profile Indicator
+
+Show AWS icon + profile in window status:
+
+```tmux
+# Show AWS icon and profile in window status
+set -g window-status-format '#I:#W #{?@aws_profile,  #{@aws_profile},}'
+set -g window-status-current-format '#I:#W #{?@aws_profile,  #{@aws_profile},}'
+```
+
+### Example 4: Conditional Window Styling
+
+Color current window based on profile:
+
+```tmux
+# This example uses Catppuccin theme colors, but any colors work
+
+if-shell '[ -n "$(tmux show-window-option -qv @aws_profile | grep -i prod)" ]' \
+    'set -g window-status-current-style "fg=#{@thm_bg},bg=#{@thm_red},bold"'
+
+if-shell '[ -n "$(tmux show-window-option -qv @aws_profile | grep -i dev)" ]' \
+    'set -g window-status-current-style "fg=#{@thm_bg},bg=#{@thm_yellow},bold"'
+```
+
+### Example 5: Advanced - Extract Environment from AWS Config
+
+If you tag profiles with 'environment' in `~/.aws/config`:
+
+```ini
+[profile my-prod]
+environment = production
+
+[profile my-dev]
+environment = development
+```
+
+You can parse it in tmux.conf:
+
+```tmux
+# Parse environment tag from AWS config
+set -g @my_aws_env "#(aws configure get environment --profile $(tmux show-option -gqv @aws_profile) 2>/dev/null || echo 'none')"
+
+# Then use it for styling
+set -g status-right 'AWS: #{@aws_profile} [#{@my_aws_env}]'
+```
+
+### Example 6: Replicate v1.x Default Styling
+
+For users who want the old auto-styling behavior:
+
+```tmux
+# Helper function to get color based on profile
+set -g @my_aws_color "#(profile=$(tmux show-option -gqv @aws_profile); \
+  case $profile in \
+    *dev*) echo '@thm_yellow' ;; \
+    *stage*) echo '@thm_peach' ;; \
+    *prod*) echo '@thm_red' ;; \
+    *) echo '@thm_rosewater' ;; \
+  esac)"
+
+# Apply window styling (approximates v1.x behavior)
+set -g window-status-style 'fg=#{@my_aws_color},bg=#{@thm_bg},nobold'
+set -g window-status-current-style 'fg=#{@thm_bg},bg=#{@my_aws_color},nobold'
+set -g window-status-format ' #I:   #W #F '
+set -g window-status-current-format ' #I:   #W #F '
 ```
 
 ## Configuration
@@ -182,10 +267,14 @@ exec "$@"
 Make it executable and configure:
 
 ```bash
-chmod +x /usr/local/bin/hsdk-vault
+chmod +x /usr/local/bin/aws-vault.sh
 ```
 
 ```tmux
 set -g @tmux-aws-vault-path 'aws-vault.sh'
 set -g @tmux-aws-env-regex '^(AWS_|TF_)'
 ```
+
+## License
+
+MIT
