@@ -62,8 +62,9 @@ _tmux_exec_window() {
 		aws_window="$(tmux display -p '#{session_name}:#{window_index}')"
 	fi
 
-	# Set window variable for user consumption
+	# Set window variables for user consumption
 	tmux set-window-option -t "$aws_window" @aws_profile "$aws_profile"
+	tmux set-window-option -t "$aws_window" @aws_profile_window "$aws_profile"
 
 	"$SHELL" -i
 }
@@ -179,8 +180,9 @@ _tmux_exec_session() {
 		fi
 	done < <(env -0)
 
-	# Set session variable for user consumption
+	# Set session variables for user consumption
 	tmux set-option -t "$session_name" @aws_profile "$aws_profile"
+	tmux set-option -t "$session_name" @aws_profile_session "$aws_profile"
 
 
 	"$SHELL" -i

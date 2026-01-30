@@ -37,30 +37,54 @@ Once installed, tmux-aws will automatically enable interactive profile selection
 
 ## Variables
 
-The plugin exposes one variable at both session and window levels:
+The plugin exposes three variables for flexible scoping:
 
 ### @aws_profile
 
-The active AWS profile name (raw string, no processing).
+The active AWS profile name (raw string, no processing). Set at both session and window levels.
 
-**Scope**: Set at both session-level and window-level, depending on which auth command you use:
-- `auth-session` or `new-session`: Sets session-level `@aws_profile`
-- `auth-window` or `new-window`: Sets window-level `@aws_profile`
+**Scope**:
+- `auth-session` or `new-session`: Sets session-level
+- `auth-window` or `new-window`: Sets window-level
 
-**Access**:
+**Precedence**: Window-level overrides session-level when accessed from window context.
+
+**Use when**: You want automatic fallback (window-level first, then session-level).
+
 ```tmux
-# In status bar / window status (uses session-level by default)
+# Shows window-level if set, otherwise session-level
 set -g status-right 'AWS: #{@aws_profile}'
-
-# Explicitly check window-level
-set -g window-status-format '#I:#W #{@aws_profile}'
-
-# In scripts / if-shell
-tmux show-option -gqv @aws_profile      # Session-level
-tmux show-window-option -qv @aws_profile # Window-level
 ```
 
-**Precedence**: Window-level overrides session-level when checking from within a window context.
+### @aws_profile_window
+
+Only set by window-level auth commands. Never falls back to session-level.
+
+**Use when**: You want to show AWS profile ONLY for windows with window-specific auth, ignoring session-wide profile.
+
+```tmux
+# Only shows if this specific window has window-level auth
+set -g window-status-format '#I:#W #{?@aws_profile_window,  #{@aws_profile_window},}'
+```
+
+### @aws_profile_session
+
+Only set by session-level auth commands. Never overridden by window-level.
+
+**Use when**: You want to show session-wide AWS profile in status bar, separate from window-specific profiles.
+
+```tmux
+# Shows session-wide profile only
+set -g status-left '#{@aws_profile_session} | '
+```
+
+### Quick Reference
+
+| Variable | Set by | Falls back | Use case |
+|----------|--------|------------|----------|
+| `@aws_profile` | Both | Yes (window → session) | General use, automatic fallback |
+| `@aws_profile_window` | Window only | No | Window-specific profiles only |
+| `@aws_profile_session` | Session only | No | Session-wide profile only |
 
 ## Commands
 
