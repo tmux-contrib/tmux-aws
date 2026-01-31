@@ -197,12 +197,15 @@ set -g status-interval 5  # Refresh every 5 seconds
 
 ### Dynamic Profile Display
 
-Similarly, you can use the generic `#{aws_profile}` pattern for dynamic profile display:
+Similarly, you can use the generic `#{aws_profile}` pattern for dynamic profile display. The plugin also provides `#{aws_account_id}` and `#{aws_region}` patterns for displaying account and region information dynamically:
 
 ```tmux
 # Dynamic profile - updates every status-interval seconds
 set -g status-left '#{aws_profile} [#{aws_credential_ttl}]'
 #                     ^ Note: no @ prefix
+
+# Dynamic profile with account ID and region
+set -g status-left '#{aws_profile} [#{aws_account_id}:#{aws_region}] [#{aws_credential_ttl}]'
 ```
 
 This pattern dynamically retrieves the session-level profile, useful when combined with conditional formatting:
@@ -210,6 +213,9 @@ This pattern dynamically retrieves the session-level profile, useful when combin
 ```tmux
 # Show profile and TTL only when a profile is set
 set -g status-left '#{?aws_profile,AWS: #{aws_profile} [#{aws_credential_ttl}] | ,}'
+
+# Show profile, account ID, region, and TTL
+set -g status-left '#{?aws_profile,AWS: #{aws_profile} [#{aws_account_id}:#{aws_region}] #{aws_credential_ttl} | ,}'
 ```
 
 ### Important Notes
@@ -217,7 +223,9 @@ set -g status-left '#{?aws_profile,AWS: #{aws_profile} [#{aws_credential_ttl}] |
 - **Static Display**: Use `#{@aws_credential_ttl_session}` (with `@`) for static TTL calculated once when credentials are loaded
 - **Dynamic Display**: Use `#{aws_credential_ttl}` (without `@`, no suffix) for TTL that updates every `status-interval` seconds
 - **Dynamic Profile**: Use `#{aws_profile}` (without `@`) for profile that updates dynamically
+- **Dynamic Account ID & Region**: Use `#{aws_account_id}` and `#{aws_region}` (without `@`) for account and region that update dynamically
 - **Availability**: TTL variables are only set when `AWS_CREDENTIAL_EXPIRATION` is present in the environment
+- **Availability**: Account ID and region variables are only set when `AWS_ACCOUNT_ID` and `AWS_REGION` are present in the environment
 - **Adaptive Format**: Display automatically adjusts based on time remaining (shows most relevant units)
 - **Scope Pattern**: TTL variables follow the same scoping behavior as `@aws_profile*` variables
 
@@ -225,12 +233,71 @@ set -g status-left '#{?aws_profile,AWS: #{aws_profile} [#{aws_credential_ttl}] |
 
 ```tmux
 # Show profile and TTL in status bar
-set -g status-right 'AWS: #{@aws_profile} [#{@aws_credential_ttl}] | %H:%M'
+set -g status-right 'AWS: #{@aws_profile} [#{aws_account_id}:#{aws_region}] #{@aws_credential_ttl} | %H:%M'
 
 # Color status bar based on TTL (advanced)
 if-shell '[ "$(tmux show-option -gqv @aws_credential_ttl)" = "X" ]' \
     'set -g status-style "fg=white,bg=red,bold"'
 ```
+
+## AWS Account ID and Region Interpolation
+
+The plugin provides dynamic display of AWS account ID and region information, similar to how profile and TTL are displayed.
+
+### Dynamic Patterns
+
+#### #{aws_account_id}
+
+Shows the AWS account ID associated with the current credentials. The value is sourced from the `AWS_ACCOUNT_ID` environment variable, which is typically set by aws-vault during authentication.
+
+**Scope**: Session and window levels (window values override session when accessed from window context)
+
+**Use when**: You want to confirm which AWS account you're working in
+
+```tmux
+# Display account ID in status bar
+set -g status-right 'AWS: #{aws_profile} [#{aws_account_id}] | %H:%M'
+```
+
+#### #{aws_region}
+
+Shows the AWS region associated with the current credentials. The value is sourced from the `AWS_REGION` environment variable, which is typically set by aws-vault during authentication.
+
+**Scope**: Session and window levels (window values override session when accessed from window context)
+
+**Use when**: You want to confirm which AWS region you're working in
+
+```tmux
+# Display region in status bar
+set -g status-right 'AWS: #{aws_profile} [#{aws_region}] | %H:%M'
+```
+
+### How It Works
+
+- Both patterns work dynamically (without `@` prefix), similar to `#{aws_profile}` and `#{aws_credential_ttl}`
+- Values are retrieved from `AWS_ACCOUNT_ID` and `AWS_REGION` environment variables
+- The plugin intercepts these patterns in your status bar configuration during plugin load
+- They respect session/window scope - window values override session values when accessed from window context
+- If the environment variables are not set, the patterns will be empty
+
+### Combined Usage
+
+You can combine account ID and region with other patterns for a complete status display:
+
+```tmux
+# Show profile, account ID, region, and TTL
+set -g status-right 'AWS: #{aws_profile} [#{aws_account_id}:#{aws_region}] #{aws_credential_ttl} | %H:%M'
+
+# Show account and region only when profile is set
+set -g status-right '#{?aws_profile,AWS: #{aws_profile} [#{aws_account_id}:#{aws_region}] | ,}%H:%M'
+```
+
+### Important Notes
+
+- **Dynamic Display**: Use `#{aws_account_id}` and `#{aws_region}` (without `@` prefix) for values that update every `status-interval` seconds
+- **Availability**: These variables are only available when aws-vault (or your credential provider) sets the corresponding environment variables
+- **Scope Pattern**: Account ID and region follow the same scoping behavior as `#{aws_profile}` - window-level values override session-level when accessed from window context
+- Unlike profile and TTL variables, account ID and region don't have explicit `_session` or `_window` variants - use the generic patterns for all cases
 
 ## Commands
 
@@ -378,6 +445,30 @@ set -g window-status-current-style 'fg=#{@thm_bg},bg=#{@my_aws_color},nobold'
 set -g window-status-format ' #I:   #W #F '
 set -g window-status-current-format ' #I:   #W #F '
 ```
+
+### Example 7: Display AWS Account and Region in Status Bar
+
+Show account ID and region alongside profile for complete AWS context awareness:
+
+```tmux
+# Display account ID and region in right status
+set -g status-right 'AWS: #{aws_profile} [#{aws_account_id}:#{aws_region}] | %H:%M'
+
+# Show region in window status for multi-region workflows
+set -g window-status-format '#I:#W #{?aws_region,  #{aws_region},}'
+set -g window-status-current-format '#I:#W #{?aws_region,  #{aws_region},}'
+
+# Comprehensive status bar with all AWS information
+set -g status-right 'AWS: #{aws_profile} [#{aws_account_id}:#{aws_region}] #{aws_credential_ttl} | %H:%M'
+
+# Conditional display - only show when profile is set
+set -g status-right '#{?aws_profile,AWS: #{aws_profile} [#{aws_account_id}:#{aws_region}] #{aws_credential_ttl} | ,}%H:%M'
+```
+
+**Use cases:**
+- **Multi-account workflows**: Verify you're working in the correct account before executing commands
+- **Multi-region deployments**: Confirm which region your credentials are targeting
+- **Production safety**: Double-check account and region to prevent accidental changes in the wrong environment
 
 ## Configuration
 
