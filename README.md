@@ -86,6 +86,93 @@ set -g status-left '#{@aws_profile_session} | '
 | `@aws_profile_window` | Window only | No | Window-specific profiles only |
 | `@aws_profile_session` | Session only | No | Session-wide profile only |
 
+## Credential Expiration
+
+When using temporary credentials (via aws-vault or similar tools), the plugin can display time-to-live (TTL) information if the `AWS_CREDENTIAL_EXPIRATION` environment variable is set.
+
+### Variables
+
+The plugin exposes three TTL variables following the same scoping pattern as profile variables:
+
+#### @aws_credential_ttl
+
+Shows the time remaining until credentials expire (raw string, human-readable format). Set at both session and window levels.
+
+**Scope**:
+- `auth-session` or `new-session`: Sets session-level
+- `auth-window` or `new-window`: Sets window-level
+
+**Precedence**: Window-level overrides session-level when accessed from window context.
+
+**Format**: Uses adaptive display based on time remaining (most compact representation):
+- `>= 24 hours`: `2d 5h` (days and hours only)
+- `1-24 hours`: `6h 45m` (hours and minutes only)
+- `1-60 minutes`: `30m 15s` (minutes and seconds)
+- `< 1 minute`: `45s` (seconds only)
+- `Expired`: `EXPIRED`
+
+**Examples**:
+- 2 days, 5 hours remaining → `2d 5h`
+- 6 hours, 45 minutes remaining → `6h 45m`
+- 30 minutes, 15 seconds remaining → `30m 15s`
+- 45 seconds remaining → `45s`
+- Expired credentials → `EXPIRED`
+
+**Use when**: You want automatic fallback (window-level first, then session-level).
+
+```tmux
+# Shows window-level TTL if set, otherwise session-level
+set -g status-right 'AWS: #{@aws_profile} [#{@aws_credential_ttl}]'
+```
+
+#### @aws_credential_ttl_window
+
+Only set by window-level auth commands. Never falls back to session-level.
+
+**Use when**: You want to show TTL ONLY for windows with window-specific auth, ignoring session-wide credentials.
+
+```tmux
+# Only shows if this specific window has window-level auth
+set -g window-status-format '#I:#W #{?@aws_credential_ttl_window,[#{@aws_credential_ttl_window}],}'
+```
+
+#### @aws_credential_ttl_session
+
+Only set by session-level auth commands. Never overridden by window-level.
+
+**Use when**: You want to show session-wide credential expiration in status bar, separate from window-specific credentials.
+
+```tmux
+# Shows session-wide TTL only
+set -g status-left '#{@aws_profile_session} [#{@aws_credential_ttl_session}] | '
+```
+
+### Quick Reference
+
+| Variable | Set by | Falls back | Use case |
+|----------|--------|------------|----------|
+| `@aws_credential_ttl` | Both | Yes (window → session) | General use, automatic fallback |
+| `@aws_credential_ttl_window` | Window only | No | Window-specific TTL only |
+| `@aws_credential_ttl_session` | Session only | No | Session-wide TTL only |
+
+### Important Notes
+
+- **Static Display**: TTL is calculated once when credentials are loaded, not updated dynamically
+- **Availability**: TTL variables are only set when `AWS_CREDENTIAL_EXPIRATION` is present in the environment
+- **Adaptive Format**: Display automatically adjusts based on time remaining (shows most relevant units)
+- **Scope Pattern**: TTL variables follow the same scoping behavior as `@aws_profile*` variables
+
+### Example: Complete Status Bar with TTL
+
+```tmux
+# Show profile and TTL in status bar
+set -g status-right 'AWS: #{@aws_profile} [#{@aws_credential_ttl}] | %H:%M'
+
+# Color status bar based on TTL (advanced)
+if-shell '[ "$(tmux show-option -gqv @aws_credential_ttl)" = "EXPIRED" ]' \
+    'set -g status-style "fg=white,bg=red,bold"'
+```
+
 ## Commands
 
 All commands work unchanged from v1.x:

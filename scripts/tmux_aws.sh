@@ -25,7 +25,6 @@ _tmux_get_aws_env_regex() {
 	echo "${aws_env_regex:-^AWS_}"
 }
 
-
 # Execute an interactive shell in a tmux window configured for an AWS profile
 #
 # Arguments:
@@ -56,7 +55,6 @@ _tmux_exec_window() {
 		esac
 	done
 
-
 	if [[ -z "$aws_window" ]]; then
 		# Auto-detect current window (backward compatible)
 		aws_window="$(tmux display -p '#{session_name}:#{window_index}')"
@@ -65,6 +63,20 @@ _tmux_exec_window() {
 	# Set window variables for user consumption
 	tmux set-window-option -t "$aws_window" @aws_profile "$aws_profile"
 	tmux set-window-option -t "$aws_window" @aws_profile_window "$aws_profile"
+
+	# Set credential expiration variables
+	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
+		local duration
+		duration="$(_time_get_duration "$AWS_CREDENTIAL_EXPIRATION")"
+
+		if [[ -n "$duration" ]]; then
+			local duration_ttl
+			duration_ttl="$(_time_format_duration "$duration")"
+
+			tmux set-window-option -t "$aws_window" @aws_credential_ttl "$duration_ttl"
+			tmux set-window-option -t "$aws_window" @aws_credential_ttl_window "$duration_ttl"
+		fi
+	fi
 
 	"$SHELL" -i
 }
@@ -184,6 +196,19 @@ _tmux_exec_session() {
 	tmux set-option -t "$session_name" @aws_profile "$aws_profile"
 	tmux set-option -t "$session_name" @aws_profile_session "$aws_profile"
 
+	# Set credential expiration variables
+	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
+		local duration
+		duration="$(_time_get_duration "$AWS_CREDENTIAL_EXPIRATION")"
+
+		if [[ -n "$duration" ]]; then
+			local duration_ttl
+			duration_ttl="$(_time_format_duration "$duration")"
+
+			tmux set-option -t "$session_name" @aws_credential_ttl "$duration_ttl"
+			tmux set-option -t "$session_name" @aws_credential_ttl_session "$duration_ttl"
+		fi
+	fi
 
 	"$SHELL" -i
 }
