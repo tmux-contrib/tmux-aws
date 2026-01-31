@@ -44,6 +44,7 @@ The plugin exposes three variables for flexible scoping:
 The active AWS profile name (raw string, no processing). Set at both session and window levels.
 
 **Scope**:
+
 - `auth-session` or `new-session`: Sets session-level
 - `auth-window` or `new-window`: Sets window-level
 
@@ -80,11 +81,11 @@ set -g status-left '#{@aws_profile_session} | '
 
 ### Quick Reference
 
-| Variable | Set by | Falls back | Use case |
-|----------|--------|------------|----------|
-| `@aws_profile` | Both | Yes (window → session) | General use, automatic fallback |
-| `@aws_profile_window` | Window only | No | Window-specific profiles only |
-| `@aws_profile_session` | Session only | No | Session-wide profile only |
+| Variable               | Set by       | Falls back             | Use case                        |
+| ---------------------- | ------------ | ---------------------- | ------------------------------- |
+| `@aws_profile`         | Both         | Yes (window → session) | General use, automatic fallback |
+| `@aws_profile_window`  | Window only  | No                     | Window-specific profiles only   |
+| `@aws_profile_session` | Session only | No                     | Session-wide profile only       |
 
 ## Credential Expiration
 
@@ -99,24 +100,27 @@ The plugin exposes three TTL variables following the same scoping pattern as pro
 Shows the time remaining until credentials expire (raw string, human-readable format). Set at both session and window levels.
 
 **Scope**:
+
 - `auth-session` or `new-session`: Sets session-level
 - `auth-window` or `new-window`: Sets window-level
 
 **Precedence**: Window-level overrides session-level when accessed from window context.
 
 **Format**: Uses adaptive display based on time remaining (most compact representation):
+
 - `>= 24 hours`: `2d 5h` (days and hours only)
 - `1-24 hours`: `6h 45m` (hours and minutes only)
 - `1-60 minutes`: `30m 15s` (minutes and seconds)
 - `< 1 minute`: `45s` (seconds only)
-- `Expired`: `EXPIRED`
+- `Expired`: `X`
 
 **Examples**:
+
 - 2 days, 5 hours remaining → `2d 5h`
 - 6 hours, 45 minutes remaining → `6h 45m`
 - 30 minutes, 15 seconds remaining → `30m 15s`
 - 45 seconds remaining → `45s`
-- Expired credentials → `EXPIRED`
+- Expired credentials → `X`
 
 **Use when**: You want automatic fallback (window-level first, then session-level).
 
@@ -149,15 +153,70 @@ set -g status-left '#{@aws_profile_session} [#{@aws_credential_ttl_session}] | '
 
 ### Quick Reference
 
-| Variable | Set by | Falls back | Use case |
-|----------|--------|------------|----------|
-| `@aws_credential_ttl` | Both | Yes (window → session) | General use, automatic fallback |
-| `@aws_credential_ttl_window` | Window only | No | Window-specific TTL only |
-| `@aws_credential_ttl_session` | Session only | No | Session-wide TTL only |
+| Variable                      | Set by       | Falls back             | Use case                        |
+| ----------------------------- | ------------ | ---------------------- | ------------------------------- |
+| `@aws_credential_ttl`         | Both         | Yes (window → session) | General use, automatic fallback |
+| `@aws_credential_ttl_window`  | Window only  | No                     | Window-specific TTL only        |
+| `@aws_credential_ttl_session` | Session only | No                     | Session-wide TTL only           |
+
+### Dynamic TTL Updates
+
+For **session-level credentials**, you can enable dynamic TTL updates that automatically count down every `status-interval` seconds.
+
+#### Static TTL (default, backwards compatible)
+
+```tmux
+# Static - shows TTL at time credentials were loaded
+set -g status-left '#{@aws_credential_ttl_session}'
+```
+
+#### Dynamic TTL (recommended for session-level)
+
+```tmux
+# Dynamic - updates every status-interval seconds
+set -g status-left '#{aws_credential_ttl}'
+#                     ^ Note: no @ prefix, no _session suffix
+```
+
+**Setup Requirements:**
+
+1. Ensure `status-interval` is set in your `tmux.conf`:
+```tmux
+set -g status-interval 5  # Refresh every 5 seconds
+```
+
+2. Use the pattern **without** the `@` prefix: `#{aws_credential_ttl}`
+
+**How it works:**
+- The plugin intercepts `#{aws_credential_ttl}` patterns in your status bar configuration
+- Replaces them with `#(path/to/scripts/tmux_aws.sh get-session ttl)` on plugin load
+- The script runs every `status-interval` seconds, dynamically calculating the remaining time
+- TTL counts down automatically: `1h 23m` → `1h 22m` → `1h 21m` → ... → `X`
+
+**Note:** Dynamic updates are currently only available for session-level credentials. Window-level credentials use static TTL display.
+
+### Dynamic Profile Display
+
+Similarly, you can use the generic `#{aws_profile}` pattern for dynamic profile display:
+
+```tmux
+# Dynamic profile - updates every status-interval seconds
+set -g status-left '#{aws_profile} [#{aws_credential_ttl}]'
+#                     ^ Note: no @ prefix
+```
+
+This pattern dynamically retrieves the session-level profile, useful when combined with conditional formatting:
+
+```tmux
+# Show profile and TTL only when a profile is set
+set -g status-left '#{?aws_profile,AWS: #{aws_profile} [#{aws_credential_ttl}] | ,}'
+```
 
 ### Important Notes
 
-- **Static Display**: TTL is calculated once when credentials are loaded, not updated dynamically
+- **Static Display**: Use `#{@aws_credential_ttl_session}` (with `@`) for static TTL calculated once when credentials are loaded
+- **Dynamic Display**: Use `#{aws_credential_ttl}` (without `@`, no suffix) for TTL that updates every `status-interval` seconds
+- **Dynamic Profile**: Use `#{aws_profile}` (without `@`) for profile that updates dynamically
 - **Availability**: TTL variables are only set when `AWS_CREDENTIAL_EXPIRATION` is present in the environment
 - **Adaptive Format**: Display automatically adjusts based on time remaining (shows most relevant units)
 - **Scope Pattern**: TTL variables follow the same scoping behavior as `@aws_profile*` variables
@@ -169,7 +228,7 @@ set -g status-left '#{@aws_profile_session} [#{@aws_credential_ttl_session}] | '
 set -g status-right 'AWS: #{@aws_profile} [#{@aws_credential_ttl}] | %H:%M'
 
 # Color status bar based on TTL (advanced)
-if-shell '[ "$(tmux show-option -gqv @aws_credential_ttl)" = "EXPIRED" ]' \
+if-shell '[ "$(tmux show-option -gqv @aws_credential_ttl)" = "X" ]' \
     'set -g status-style "fg=white,bg=red,bold"'
 ```
 

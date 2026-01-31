@@ -61,11 +61,14 @@ _tmux_exec_window() {
 	fi
 
 	# Set window variables for user consumption
-	tmux set-window-option -t "$aws_window" @aws_profile "$aws_profile"
-	tmux set-window-option -t "$aws_window" @aws_profile_window "$aws_profile"
+	_tmux_set_window_option "$aws_window" "@aws_profile" "$aws_profile"
 
 	# Set credential expiration variables
 	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
+		# Store raw ISO8601 timestamp for dynamic calculation
+		_tmux_set_window_option "$aws_window" "@aws_credential_expiration" "$AWS_CREDENTIAL_EXPIRATION"
+
+		# Also calculate initial formatted TTL (for backwards compatibility)
 		local duration
 		duration="$(_time_get_duration "$AWS_CREDENTIAL_EXPIRATION")"
 
@@ -73,8 +76,7 @@ _tmux_exec_window() {
 			local duration_ttl
 			duration_ttl="$(_time_format_duration "$duration")"
 
-			tmux set-window-option -t "$aws_window" @aws_credential_ttl "$duration_ttl"
-			tmux set-window-option -t "$aws_window" @aws_credential_ttl_window "$duration_ttl"
+			_tmux_set_window_option "$aws_window" "@aws_credential_ttl" "$duration_ttl"
 		fi
 	fi
 
@@ -193,11 +195,14 @@ _tmux_exec_session() {
 	done < <(env -0)
 
 	# Set session variables for user consumption
-	tmux set-option -t "$session_name" @aws_profile "$aws_profile"
-	tmux set-option -t "$session_name" @aws_profile_session "$aws_profile"
+	_tmux_set_session_option "$session_name" "@aws_profile" "$aws_profile"
 
 	# Set credential expiration variables
 	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
+		# Store raw ISO8601 timestamp for dynamic calculation
+		_tmux_set_session_option "$session_name" "@aws_credential_expiration" "$AWS_CREDENTIAL_EXPIRATION"
+
+		# Also calculate initial formatted TTL (for backwards compatibility)
 		local duration
 		duration="$(_time_get_duration "$AWS_CREDENTIAL_EXPIRATION")"
 
@@ -205,8 +210,7 @@ _tmux_exec_session() {
 			local duration_ttl
 			duration_ttl="$(_time_format_duration "$duration")"
 
-			tmux set-option -t "$session_name" @aws_credential_ttl "$duration_ttl"
-			tmux set-option -t "$session_name" @aws_credential_ttl_session "$duration_ttl"
+			_tmux_set_session_option "$session_name" "@aws_credential_ttl" "$duration_ttl"
 		fi
 	fi
 
@@ -251,6 +255,122 @@ _tmux_auth_session() {
 	# Use aws-vault-compatible interface: exec <profile> -- <command>
 	"$aws_vault_path" exec "$aws_profile" -- \
 		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile"
+}
+
+# Get session-level AWS information
+#
+# Usage:
+#   get-session [-t target-session] profile
+#   get-session [-t target-session] ttl
+#
+# Arguments:
+#   -t target-session  - Target session (defaults to current session)
+#   profile|ttl - What to retrieve
+_tmux_get_session() {
+	local target=""
+	local what=""
+
+	# Parse arguments
+	while [[ $# -gt 0 ]]; do
+		case "${1}" in
+		-t)
+			shift
+			target="$1"
+			shift
+			;;
+		profile|ttl)
+			what="$1"
+			shift
+			;;
+		*)
+			shift
+			;;
+		esac
+	done
+
+	# If no target specified, use current session
+	if [[ -z "$target" ]]; then
+		target="$(tmux display -p '#{session_name}')"
+	fi
+
+	case "$what" in
+	profile)
+		local profile
+		profile="$(_tmux_get_session_option "$target" "@aws_profile")"
+		if [[ -n "$profile" ]]; then
+			echo "$profile"
+		fi
+		;;
+	ttl)
+		local expiration
+		expiration="$(_tmux_get_session_option "$target" "@aws_credential_expiration")"
+		if [[ -n "$expiration" ]]; then
+			local duration
+			duration="$(_time_get_duration "$expiration")"
+			if [[ -n "$duration" ]]; then
+				_time_format_duration "$duration"
+			fi
+		fi
+		;;
+	esac
+}
+
+# Get window-level AWS information
+#
+# Usage:
+#   get-window [-t target-window] profile
+#   get-window [-t target-window] ttl
+#
+# Arguments:
+#   -t target-window   - Target window (defaults to current window)
+#   profile|ttl - What to retrieve
+_tmux_get_window() {
+	local target=""
+	local what=""
+
+	# Parse arguments
+	while [[ $# -gt 0 ]]; do
+		case "${1}" in
+		-t)
+			shift
+			target="$1"
+			shift
+			;;
+		profile|ttl)
+			what="$1"
+			shift
+			;;
+		*)
+			shift
+			;;
+		esac
+	done
+
+	# If no target specified, use current window
+	if [[ -z "$target" ]]; then
+		target="$(tmux display -p '#{session_name}:#{window_index}')"
+	fi
+
+	case "$what" in
+	profile)
+		local profile
+		profile="$(_tmux_get_window_option "$target" "@aws_profile")"
+		if [[ -n "$profile" ]]; then
+			echo "$profile"
+		fi
+		;;
+	ttl)
+		local expiration
+		expiration="$(_tmux_get_window_option "$target" "@aws_credential_expiration")"
+		if [[ -n "$expiration" ]]; then
+			local duration
+			duration="$(_time_get_duration "$expiration")"
+			if [[ -n "$duration" ]]; then
+				_time_format_duration "$duration"
+			fi
+		fi
+		;;
+	esac
 }
 
 # Create a new tmux session with AWS profile configuration
@@ -302,15 +422,17 @@ _tmux_new_session() {
 # Main command router
 #
 # Arguments:
-#   $1 - Command name (new-window, exec-window, new-session, exec-session, auth-session, auth-window)
+#   $1 - Command name
 #   $@ - Command-specific arguments (passed to the respective function)
 # Commands:
-#   new-window   - Create a new tmux window with AWS profile configuration
-#   exec-window  - Execute an interactive shell in a styled tmux window
-#   new-session  - Create a new tmux session with AWS profile configuration
-#   exec-session - Execute an interactive shell in a styled tmux session
-#   auth-session - Authenticate current tmux session with AWS profile configuration
-#   auth-window  - Authenticate current tmux window with AWS profile configuration
+#   new-window    - Create a new tmux window with AWS profile configuration
+#   exec-window   - Execute an interactive shell in a styled tmux window
+#   new-session   - Create a new tmux session with AWS profile configuration
+#   exec-session  - Execute an interactive shell in a styled tmux session
+#   auth-session  - Authenticate current tmux session with AWS profile configuration
+#   auth-window   - Authenticate current tmux window with AWS profile configuration
+#   get-session   - Get session-level AWS information (profile|ttl)
+#   get-window    - Get window-level AWS information (profile|ttl)
 main() {
 	local command="${1:-}"
 	shift || true
@@ -333,6 +455,12 @@ main() {
 		;;
 	new-session)
 		_tmux_new_session "$@"
+		;;
+	get-session)
+		_tmux_get_session "$@"
+		;;
+	get-window)
+		_tmux_get_window "$@"
 		;;
 	esac
 }

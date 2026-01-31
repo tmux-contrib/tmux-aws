@@ -16,6 +16,70 @@ _tmux_get_option() {
 	echo "${value:-$default}"
 }
 
+# Get tmux session option with default fallback
+#
+# Arguments:
+#   $1 - target session
+#   $2 - option name
+#   $3 - default value (optional)
+# Outputs:
+#   Option value or default
+_tmux_get_session_option() {
+	local target="$1"
+	local option="$2"
+	local default="$3"
+	local value
+
+	value="$(tmux show-option -t "$target" -qv "$option" 2>/dev/null)"
+	echo "${value:-$default}"
+}
+
+# Get tmux window option with default fallback
+#
+# Arguments:
+#   $1 - target window
+#   $2 - option name
+#   $3 - default value (optional)
+# Outputs:
+#   Option value or default
+_tmux_get_window_option() {
+	local target="$1"
+	local option="$2"
+	local default="$3"
+	local value
+
+	value="$(tmux show-option -t "$target" -wqv "$option" 2>/dev/null)"
+	echo "${value:-$default}"
+}
+
+# Set tmux session option
+#
+# Arguments:
+#   $1 - target session
+#   $2 - option name
+#   $3 - option value
+_tmux_set_session_option() {
+	local target="$1"
+	local option="$2"
+	local value="$3"
+
+	tmux set-option -t "$target" "$option" "$value"
+}
+
+# Set tmux window option
+#
+# Arguments:
+#   $1 - target window
+#   $2 - option name
+#   $3 - option value
+_tmux_set_window_option() {
+	local target="$1"
+	local option="$2"
+	local value="$3"
+
+	tmux set-window-option -t "$target" "$option" "$value"
+}
+
 # Get aws option with default fallback
 #
 # Arguments:
