@@ -15,6 +15,16 @@ aws_profile_session_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-ses
 aws_credential_ttl_window_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-window ttl)"
 aws_profile_window_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-window profile)"
 
+# Account ID patterns
+aws_account_id_session_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-session account-id)"
+aws_account_id_window_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-window account-id)"
+aws_account_id_pattern="#{aws_account_id}"
+
+# Region patterns
+aws_region_session_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-session region)"
+aws_region_window_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-window region)"
+aws_region_pattern="#{aws_region}"
+
 aws_credential_ttl_pattern="#{aws_credential_ttl}"
 aws_profile_pattern="#{aws_profile}"
 
@@ -45,6 +55,8 @@ _tmux_interpolate_session() {
     # Use sed for reliable pattern replacement (#{} has special meaning in bash)
     content=$(echo "$content" | sed "s|#{aws_credential_ttl}|$aws_credential_ttl_session_interpolation|g")
     content=$(echo "$content" | sed "s|#{aws_profile}|$aws_profile_session_interpolation|g")
+    content=$(echo "$content" | sed "s|#{aws_account_id}|$aws_account_id_session_interpolation|g")
+    content=$(echo "$content" | sed "s|#{aws_region}|$aws_region_session_interpolation|g")
 
     echo "$content"
 }
@@ -64,6 +76,8 @@ _tmux_interpolate_window() {
     # Use sed for reliable pattern replacement (#{} has special meaning in bash)
     content=$(echo "$content" | sed "s|#{aws_credential_ttl}|$aws_credential_ttl_window_interpolation|g")
     content=$(echo "$content" | sed "s|#{aws_profile}|$aws_profile_window_interpolation|g")
+    content=$(echo "$content" | sed "s|#{aws_account_id}|$aws_account_id_window_interpolation|g")
+    content=$(echo "$content" | sed "s|#{aws_region}|$aws_region_window_interpolation|g")
 
     echo "$content"
 }

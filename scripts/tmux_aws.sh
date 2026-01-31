@@ -80,6 +80,16 @@ _tmux_exec_window() {
 		fi
 	fi
 
+	# Set AWS account ID if available
+	if [[ -n "${AWS_ACCOUNT_ID:-}" ]]; then
+		_tmux_set_window_option "$aws_window" "@aws_account_id" "$AWS_ACCOUNT_ID"
+	fi
+
+	# Set AWS region if available
+	if [[ -n "${AWS_REGION:-}" ]]; then
+		_tmux_set_window_option "$aws_window" "@aws_region" "$AWS_REGION"
+	fi
+
 	"$SHELL" -i
 }
 
@@ -214,6 +224,16 @@ _tmux_exec_session() {
 		fi
 	fi
 
+	# Set AWS account ID if available
+	if [[ -n "${AWS_ACCOUNT_ID:-}" ]]; then
+		_tmux_set_session_option "$session_name" "@aws_account_id" "$AWS_ACCOUNT_ID"
+	fi
+
+	# Set AWS region if available
+	if [[ -n "${AWS_REGION:-}" ]]; then
+		_tmux_set_session_option "$session_name" "@aws_region" "$AWS_REGION"
+	fi
+
 	"$SHELL" -i
 }
 
@@ -278,7 +298,7 @@ _tmux_get_session() {
 			target="$1"
 			shift
 			;;
-		profile|ttl)
+		profile|ttl|account-id|region)
 			what="$1"
 			shift
 			;;
@@ -312,6 +332,20 @@ _tmux_get_session() {
 			fi
 		fi
 		;;
+	account-id)
+		local account_id
+		account_id="$(_tmux_get_session_option "$target" "@aws_account_id")"
+		if [[ -n "$account_id" ]]; then
+			echo "$account_id"
+		fi
+		;;
+	region)
+		local region
+		region="$(_tmux_get_session_option "$target" "@aws_region")"
+		if [[ -n "$region" ]]; then
+			echo "$region"
+		fi
+		;;
 	esac
 }
 
@@ -336,7 +370,7 @@ _tmux_get_window() {
 			target="$1"
 			shift
 			;;
-		profile|ttl)
+		profile|ttl|account-id|region)
 			what="$1"
 			shift
 			;;
@@ -368,6 +402,20 @@ _tmux_get_window() {
 			if [[ -n "$duration" ]]; then
 				_time_format_duration "$duration"
 			fi
+		fi
+		;;
+	account-id)
+		local account_id
+		account_id="$(_tmux_get_window_option "$target" "@aws_account_id")"
+		if [[ -n "$account_id" ]]; then
+			echo "$account_id"
+		fi
+		;;
+	region)
+		local region
+		region="$(_tmux_get_window_option "$target" "@aws_region")"
+		if [[ -n "$region" ]]; then
+			echo "$region"
 		fi
 		;;
 	esac
