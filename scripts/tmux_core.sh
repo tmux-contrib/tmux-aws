@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# tmux_core.sh — shared library; meant to be sourced, not executed directly.
+
+# Time conversion constants
+readonly _SECS_PER_DAY=86400
+readonly _SECS_PER_HOUR=3600
+readonly _SECS_PER_MIN=60
 
 # Get tmux option with default fallback
 #
@@ -94,7 +100,13 @@ _aws_get_option() {
 	local default="$3"
 	local value
 
-	value="$(aws configure get "$option" --profile "$profile")"
+	if ! command -v aws &>/dev/null; then
+		echo "tmux-aws: 'aws' not found in PATH" >&2
+		echo "$default"
+		return 1
+	fi
+
+	value="$(aws configure get "$option" --profile "$profile" 2>/dev/null)"
 	echo "${value:-$default}"
 }
 
@@ -108,9 +120,14 @@ _time_get_epoch() {
 	local timestamp="$1"
 	[[ -z "$timestamp" ]] && return
 
-	# Remove trailing Z or timezone offset for BSD date compatibility
+	# Remove trailing Z or any timezone offset for BSD date compatibility.
+	# Handles: Z, +00:00, -05:00, +05:30, etc.
 	local clean_ts="${timestamp%Z}"
 	clean_ts="${clean_ts%+00:00}"
+	# Strip any remaining +HH:MM or -HH:MM offset
+	if [[ "$clean_ts" =~ ^(.+)[+-][0-9]{2}:[0-9]{2}$ ]]; then
+		clean_ts="${BASH_REMATCH[1]}"
+	fi
 
 	# Try GNU date first (Linux)
 	local epoch
@@ -122,7 +139,11 @@ _time_get_epoch() {
 	# Fall back to BSD date (macOS)
 	if epoch="$(date -j -u -f "%Y-%m-%dT%H:%M:%S" "$clean_ts" +%s 2>/dev/null)"; then
 		echo "$epoch"
+		return
 	fi
+
+	# Both date implementations failed — emit diagnostic to stderr
+	echo "tmux-aws: _time_get_epoch: failed to parse timestamp '$timestamp'" >&2
 }
 
 # Calculate seconds remaining until expiration
@@ -165,19 +186,19 @@ _time_format_duration() {
 	local duration="$1"
 	[[ -z "$duration" ]] && return
 
-	local days=$((duration / 86400))
-	local hours=$(((duration % 86400) / 3600))
-	local minutes=$(((duration % 3600) / 60))
-	local seconds=$((duration % 60))
+	local days=$((duration / _SECS_PER_DAY))
+	local hours=$(((duration % _SECS_PER_DAY) / _SECS_PER_HOUR))
+	local minutes=$(((duration % _SECS_PER_HOUR) / _SECS_PER_MIN))
+	local seconds=$((duration % _SECS_PER_MIN))
 
 	# Adaptive format based on time remaining
-	if [[ $duration -ge 86400 ]]; then
+	if [[ $duration -ge $_SECS_PER_DAY ]]; then
 		# >= 24 hours: show days and hours only
 		printf "%dd %dh" "$days" "$hours"
-	elif [[ $duration -ge 3600 ]]; then
+	elif [[ $duration -ge $_SECS_PER_HOUR ]]; then
 		# 1-24 hours: show hours and minutes only
 		printf "%dh %dm" "$hours" "$minutes"
-	elif [[ $duration -ge 60 ]]; then
+	elif [[ $duration -ge $_SECS_PER_MIN ]]; then
 		# 1-60 minutes: show minutes and seconds
 		printf "%dm %ds" "$minutes" "$seconds"
 	elif [[ $duration -gt 0 ]]; then

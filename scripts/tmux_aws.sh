@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-[ -z "$DEBUG" ] || set -x
+[ -z "$DEBUG" ] || { set -x; set -e; }
 
 _tmux_aws_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=tmux_core.sh
+[[ -f "$_tmux_aws_source_dir/tmux_core.sh" ]] || { echo "tmux-aws: missing tmux_core.sh" >&2; exit 1; }
 source "$_tmux_aws_source_dir/tmux_core.sh"
 
 # Get configured vault executable path
@@ -50,6 +51,7 @@ _tmux_exec_window() {
 			shift
 			;;
 		*)
+			echo "tmux-aws: exec-window: unknown argument: $1" >&2
 			shift
 			;;
 		esac
@@ -110,6 +112,7 @@ _tmux_auth_window() {
 			shift
 			;;
 		*)
+			echo "tmux-aws: auth-window: unknown argument: $1" >&2
 			shift
 			;;
 		esac
@@ -121,7 +124,7 @@ _tmux_auth_window() {
 
 	# Check if vault executable exists
 	if ! command -v "$aws_vault_path" &>/dev/null; then
-		echo "ERROR: $aws_vault_path not found in PATH" >&2
+		echo "ERROR: $aws_vault_path not found or not executable" >&2
 		echo "Configure with: set -g @tmux-aws-vault-path '<path>'" >&2
 		return 1
 	fi
@@ -149,19 +152,30 @@ _tmux_new_window() {
 			shift
 			;;
 		*)
+			echo "tmux-aws: new-window: unknown argument: $1" >&2
 			shift
 			;;
 		esac
 	done
 
 	local aws_account_id
-	aws_account_id="$(_aws_get_option "$aws_profile" "sso_account_id" "none")"
+	aws_account_id="$(_aws_get_option "$aws_profile" "sso_account_id" "")"
 
 	local aws_region
-	aws_region="$(_aws_get_option "$aws_profile" "sso_region" "none")"
+	aws_region="$(_aws_get_option "$aws_profile" "sso_region" "")"
+
+	if [[ -z "$aws_account_id" || -z "$aws_region" ]]; then
+		echo "ERROR: Could not determine account ID or region for profile '$aws_profile'" >&2
+		return 1
+	fi
+
+	if [[ ! "$aws_account_id" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$aws_region" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+		echo "ERROR: Invalid characters in account ID '$aws_account_id' or region '$aws_region'" >&2
+		return 1
+	fi
 
 	tmux new-window -n "$aws_account_id-$aws_region" \
-		"$_tmux_aws_source_dir/tmux_aws.sh auth-window --profile $aws_profile"
+		"$_tmux_aws_source_dir/tmux_aws.sh" auth-window --profile "$aws_profile"
 }
 
 # Execute an interactive shell in a tmux session configured for an AWS profile
@@ -183,6 +197,7 @@ _tmux_exec_session() {
 			shift
 			;;
 		*)
+			echo "tmux-aws: exec-session: unknown argument: $1" >&2
 			shift
 			;;
 		esac
@@ -256,6 +271,7 @@ _tmux_auth_session() {
 			shift
 			;;
 		*)
+			echo "tmux-aws: auth-session: unknown argument: $1" >&2
 			shift
 			;;
 		esac
@@ -267,7 +283,7 @@ _tmux_auth_session() {
 
 	# Check if vault executable exists
 	if ! command -v "$aws_vault_path" &>/dev/null; then
-		echo "ERROR: $aws_vault_path not found in PATH" >&2
+		echo "ERROR: $aws_vault_path not found or not executable" >&2
 		echo "Configure with: set -g @tmux-aws-vault-path '<path>'" >&2
 		return 1
 	fi
@@ -303,6 +319,7 @@ _tmux_get_session() {
 			shift
 			;;
 		*)
+			echo "tmux-aws: get-session: unknown argument: $1" >&2
 			shift
 			;;
 		esac
@@ -375,6 +392,7 @@ _tmux_get_window() {
 			shift
 			;;
 		*)
+			echo "tmux-aws: get-window: unknown argument: $1" >&2
 			shift
 			;;
 		esac
@@ -440,16 +458,27 @@ _tmux_new_session() {
 			shift
 			;;
 		*)
+			echo "tmux-aws: new-session: unknown argument: $1" >&2
 			shift
 			;;
 		esac
 	done
 
 	local aws_account_id
-	aws_account_id="$(_aws_get_option "$aws_profile" "sso_account_id" "none")"
+	aws_account_id="$(_aws_get_option "$aws_profile" "sso_account_id" "")"
 
 	local aws_region
-	aws_region="$(_aws_get_option "$aws_profile" "sso_region" "none")"
+	aws_region="$(_aws_get_option "$aws_profile" "sso_region" "")"
+
+	if [[ -z "$aws_account_id" || -z "$aws_region" ]]; then
+		echo "ERROR: Could not determine account ID or region for profile '$aws_profile'" >&2
+		return 1
+	fi
+
+	if [[ ! "$aws_account_id" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$aws_region" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+		echo "ERROR: Invalid characters in account ID '$aws_account_id' or region '$aws_region'" >&2
+		return 1
+	fi
 
 	local session_name="$aws_account_id-$aws_region"
 	# Check if session already exists
@@ -461,7 +490,7 @@ _tmux_new_session() {
 
 	# Create new detached session with aws-vault exec wrapping
 	tmux new-session -d -s "$session_name" \
-		"$_tmux_aws_source_dir/tmux_aws.sh auth-session --profile $aws_profile"
+		"$_tmux_aws_source_dir/tmux_aws.sh" auth-session --profile "$aws_profile"
 
 	# Attach or switch to the new session
 	tmux switch-client -t "$session_name" 2>/dev/null || tmux attach -t "$session_name"

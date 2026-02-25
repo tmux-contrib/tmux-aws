@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-[ -z "$DEBUG" ] || set -x
+[ -z "$DEBUG" ] || { set -x; set -e; }
 
 _tmux_aws_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/tmux_core.sh
+[[ -f "$_tmux_aws_root/scripts/tmux_core.sh" ]] || { echo "tmux-aws: missing tmux_core.sh" >&2; exit 1; }
 source "$_tmux_aws_root/scripts/tmux_core.sh"
 
 # Define interpolation patterns for dynamic updates
@@ -52,11 +53,12 @@ _tmux_set_option() {
 _tmux_interpolate_session() {
     local content="$1"
 
-    # Use sed for reliable pattern replacement (#{} has special meaning in bash)
-    content=$(echo "$content" | sed "s|#{aws_credential_ttl}|$aws_credential_ttl_session_interpolation|g")
-    content=$(echo "$content" | sed "s|#{aws_profile}|$aws_profile_session_interpolation|g")
-    content=$(echo "$content" | sed "s|#{aws_account_id}|$aws_account_id_session_interpolation|g")
-    content=$(echo "$content" | sed "s|#{aws_region}|$aws_region_session_interpolation|g")
+    # Single sed call with multiple expressions (#{} has special meaning in bash)
+    content=$(echo "$content" | sed \
+        -e "s|#{aws_credential_ttl}|$aws_credential_ttl_session_interpolation|g" \
+        -e "s|#{aws_profile}|$aws_profile_session_interpolation|g" \
+        -e "s|#{aws_account_id}|$aws_account_id_session_interpolation|g" \
+        -e "s|#{aws_region}|$aws_region_session_interpolation|g")
 
     echo "$content"
 }
@@ -73,11 +75,12 @@ _tmux_interpolate_session() {
 _tmux_interpolate_window() {
     local content="$1"
 
-    # Use sed for reliable pattern replacement (#{} has special meaning in bash)
-    content=$(echo "$content" | sed "s|#{aws_credential_ttl}|$aws_credential_ttl_window_interpolation|g")
-    content=$(echo "$content" | sed "s|#{aws_profile}|$aws_profile_window_interpolation|g")
-    content=$(echo "$content" | sed "s|#{aws_account_id}|$aws_account_id_window_interpolation|g")
-    content=$(echo "$content" | sed "s|#{aws_region}|$aws_region_window_interpolation|g")
+    # Single sed call with multiple expressions (#{} has special meaning in bash)
+    content=$(echo "$content" | sed \
+        -e "s|#{aws_credential_ttl}|$aws_credential_ttl_window_interpolation|g" \
+        -e "s|#{aws_profile}|$aws_profile_window_interpolation|g" \
+        -e "s|#{aws_account_id}|$aws_account_id_window_interpolation|g" \
+        -e "s|#{aws_region}|$aws_region_window_interpolation|g")
 
     echo "$content"
 }

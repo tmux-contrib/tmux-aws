@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 _source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[[ -f "$_source_dir/tmux_core.sh" ]] || { echo "tmux-aws: missing tmux_core.sh" >&2; exit 1; }
 source "$_source_dir/tmux_core.sh"
 
 # Check aws-fzf availability
