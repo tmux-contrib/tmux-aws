@@ -55,22 +55,18 @@ _tmux_display_message() {
 	local aws_region="$4"
 	local aws_ttl="$5"
 
-	local message="AWS: authenticated $scope as '$aws_profile'"
-	local details=""
+	local message="AWS [$scope]: $aws_profile"
+
 	if [[ -n "$aws_account_id" ]]; then
-		details="$aws_account_id"
+		message="$message · $aws_account_id"
 	fi
 
 	if [[ -n "$aws_region" ]]; then
-		details="${details:+$details, }$aws_region"
+		message="$message · $aws_region"
 	fi
 
 	if [[ -n "$aws_ttl" ]]; then
-		details="${details:+$details, }$aws_ttl"
-	fi
-
-	if [[ -n "$details" ]]; then
-		message="$message ($details)"
+		message="$message · $aws_ttl"
 	fi
 
 	tmux display-message "$message"
