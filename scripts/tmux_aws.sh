@@ -178,6 +178,12 @@ _tmux_auth_window() {
 		esac
 	done
 
+	# Block re-authentication if already inside an aws-vault session
+	if [[ -n "${AWS_VAULT:-}" ]]; then
+		tmux display-message "AWS: already authenticated as '$AWS_VAULT' (open a new window for a different profile)"
+		return 1
+	fi
+
 	# Get configured vault executable
 	local aws_vault_path
 	aws_vault_path="$(_tmux_get_aws_vault_path)"
@@ -347,6 +353,12 @@ _tmux_auth_session() {
 			;;
 		esac
 	done
+
+	# Block re-authentication if already inside an aws-vault session
+	if [[ -n "${AWS_VAULT:-}" ]]; then
+		tmux display-message "AWS: already authenticated as '$AWS_VAULT' (open a new session for a different profile)"
+		return 1
+	fi
 
 	# Get configured vault executable
 	local aws_vault_path
