@@ -18,7 +18,6 @@ if ! aws fzf --help &>/dev/null 2>&1; then
 	exit 1
 fi
 
-tmux display-message "AWS: loading profiles..."
 # Launch aws-fzf with tmux-aws keybindings
 # alt-c: Create new window with selected profile
 # alt-C: Create new session with selected profile
