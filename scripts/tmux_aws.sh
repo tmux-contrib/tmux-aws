@@ -90,6 +90,7 @@ _tmux_display_message() {
 _tmux_exec_window() {
 	local aws_profile=""
 	local aws_window=""
+	local start_shell="false"
 
 	while [[ $# -gt 0 ]]; do
 		case "${1}" in
@@ -101,6 +102,10 @@ _tmux_exec_window() {
 		--window)
 			shift
 			aws_window="$1"
+			shift
+			;;
+		--start-shell)
+			start_shell="true"
 			shift
 			;;
 		*)
@@ -155,7 +160,9 @@ _tmux_exec_window() {
 
 	_tmux_display_message "window" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
 
-	"$SHELL" -i
+	if [[ "$start_shell" == "true" ]]; then
+		"$SHELL" -i
+	fi
 }
 
 # Authenticate current tmux window with AWS profile configuration
@@ -166,12 +173,17 @@ _tmux_exec_window() {
 #   Applies AWS credentials to the current window via aws-vault exec.
 _tmux_auth_window() {
 	local aws_profile=""
+	local start_shell=""
 
 	while [[ $# -gt 0 ]]; do
 		case "${1}" in
 		--profile)
 			shift
 			aws_profile="$1"
+			shift
+			;;
+		--start-shell)
+			start_shell="--start-shell"
 			shift
 			;;
 		*)
@@ -201,7 +213,7 @@ _tmux_auth_window() {
 
 	# Use aws-vault-compatible interface: exec <profile> -- <command>
 	if ! "$aws_vault_path" exec "$aws_profile" -- \
-		"$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile"; then
+		"$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile" $start_shell; then
 		tmux display-message "AWS: authentication failed for '$aws_profile'"
 		return 1
 	fi
@@ -247,7 +259,7 @@ _tmux_new_window() {
 	fi
 
 	tmux new-window -n "$aws_account_id-$aws_region" \
-		"$_tmux_aws_source_dir/tmux_aws.sh" auth-window --profile "$aws_profile"
+		"$_tmux_aws_source_dir/tmux_aws.sh" auth-window --profile "$aws_profile" --start-shell
 }
 
 # Execute an interactive shell in a tmux session configured for an AWS profile
@@ -260,12 +272,17 @@ _tmux_new_window() {
 #   All future windows/panes created in this session will inherit the AWS credentials.
 _tmux_exec_session() {
 	local aws_profile=""
+	local start_shell="false"
 
 	while [[ $# -gt 0 ]]; do
 		case "${1}" in
 		--profile)
 			shift
 			aws_profile="$1"
+			shift
+			;;
+		--start-shell)
+			start_shell="true"
 			shift
 			;;
 		*)
@@ -331,7 +348,9 @@ _tmux_exec_session() {
 
 	_tmux_display_message "session" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
 
-	"$SHELL" -i
+	if [[ "$start_shell" == "true" ]]; then
+		"$SHELL" -i
+	fi
 }
 
 # Authenticate current tmux session with AWS profile configuration
@@ -344,12 +363,17 @@ _tmux_exec_session() {
 #   inherit AWS credentials at the session level.
 _tmux_auth_session() {
 	local aws_profile=""
+	local start_shell=""
 
 	while [[ $# -gt 0 ]]; do
 		case "${1}" in
 		--profile)
 			shift
 			aws_profile="$1"
+			shift
+			;;
+		--start-shell)
+			start_shell="--start-shell"
 			shift
 			;;
 		*)
@@ -378,7 +402,7 @@ _tmux_auth_session() {
 	tmux display-message "AWS: authenticating session as '$aws_profile'..."
 	# Use aws-vault-compatible interface: exec <profile> -- <command>
 	if ! "$aws_vault_path" exec "$aws_profile" -- \
-		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile"; then
+		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile" $start_shell; then
 		tmux display-message "AWS: authentication failed for '$aws_profile'"
 		return 1
 	fi
@@ -580,7 +604,7 @@ _tmux_new_session() {
 
 	# Create new detached session with aws-vault exec wrapping
 	tmux new-session -d -s "$session_name" \
-		"$_tmux_aws_source_dir/tmux_aws.sh" auth-session --profile "$aws_profile"
+		"$_tmux_aws_source_dir/tmux_aws.sh" auth-session --profile "$aws_profile" --start-shell
 
 	# Attach or switch to the new session
 	tmux switch-client -t "$session_name" 2>/dev/null || tmux attach -t "$session_name"
