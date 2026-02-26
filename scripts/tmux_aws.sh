@@ -10,6 +10,12 @@ _tmux_aws_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$_tmux_aws_source_dir/tmux_core.sh"
 
 # Get configured vault executable path
+#
+# Reads @tmux-aws-vault-path from tmux global options.
+# Falls back to "aws-vault" if unset. Expands leading ~/ to $HOME.
+#
+# Outputs:
+#   Resolved path to the vault executable
 _tmux_get_aws_vault_path() {
 	local aws_vault_path
 	aws_vault_path="$(tmux show-option -gqv @tmux-aws-vault-path)"
@@ -22,6 +28,12 @@ _tmux_get_aws_vault_path() {
 }
 
 # Get environment variable regex pattern
+#
+# Reads @tmux-aws-env-regex from tmux global options.
+# Falls back to "^AWS_" if unset.
+#
+# Outputs:
+#   Regex pattern for matching environment variables to propagate
 _tmux_get_aws_env_regex() {
 	local aws_env_regex
 	aws_env_regex="$(tmux show-option -gqv @tmux-aws-env-regex)"
@@ -68,10 +80,12 @@ _tmux_display_message() {
 #
 # Arguments:
 #   --profile - AWS profile name
-#   --window - (Optional) Target window in format "session:index" (e.g., "mysession:0")
-#              If not provided, defaults to the current window
+#   --window  - (Optional) Target window in format "session:index" (e.g., "mysession:0")
+#               If not provided, defaults to the current window
 # Side effects:
-#   Sets window variable for the specified or current window, then launches an interactive shell.
+#   Sets window variables (@aws_profile, @aws_credential_expiration, @aws_credential_ttl,
+#   @aws_account_id, @aws_region) for the specified or current window, then launches an
+#   interactive shell. Displays an authenticated summary on shell exit.
 _tmux_exec_window() {
 	local aws_profile=""
 	local aws_window=""
@@ -191,8 +205,7 @@ _tmux_auth_window() {
 # Arguments:
 #   --profile - AWS profile name
 # Side effects:
-#   Creates a new tmux window named with the AWS account ID and region.
-#   The window is launched via aws-vault exec and automatically styled for the profile.
+#   Creates a new tmux window named "<account_id>-<region>" and delegates to auth-window.
 _tmux_new_window() {
 	local aws_profile=""
 
@@ -361,12 +374,11 @@ _tmux_auth_session() {
 # Get session-level AWS information
 #
 # Usage:
-#   get-session [-t target-session] profile
-#   get-session [-t target-session] ttl
+#   get-session [-t target-session] profile|ttl|account-id|region
 #
 # Arguments:
-#   -t target-session  - Target session (defaults to current session)
-#   profile|ttl - What to retrieve
+#   -t target-session           - Target session (defaults to current session)
+#   profile|ttl|account-id|region - What to retrieve
 _tmux_get_session() {
 	local target=""
 	local what=""
@@ -434,12 +446,11 @@ _tmux_get_session() {
 # Get window-level AWS information
 #
 # Usage:
-#   get-window [-t target-window] profile
-#   get-window [-t target-window] ttl
+#   get-window [-t target-window] profile|ttl|account-id|region
 #
 # Arguments:
-#   -t target-window   - Target window (defaults to current window)
-#   profile|ttl - What to retrieve
+#   -t target-window              - Target window (defaults to current window)
+#   profile|ttl|account-id|region - What to retrieve
 _tmux_get_window() {
 	local target=""
 	local what=""
@@ -574,8 +585,8 @@ _tmux_new_session() {
 #   exec-session  - Execute an interactive shell in a styled tmux session
 #   auth-session  - Authenticate current tmux session with AWS profile configuration
 #   auth-window   - Authenticate current tmux window with AWS profile configuration
-#   get-session   - Get session-level AWS information (profile|ttl)
-#   get-window    - Get window-level AWS information (profile|ttl)
+#   get-session   - Get session-level AWS information (profile|ttl|account-id|region)
+#   get-window    - Get window-level AWS information (profile|ttl|account-id|region)
 main() {
 	local command="${1:-}"
 	shift || true
