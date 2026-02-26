@@ -142,7 +142,7 @@ _tmux_setup_fzf() {
 	fzf_aws_key=${fzf_aws_key:-'a'}
 
 	# Bind to fzf-menu table
-	tmux bind -T fzf-menu "$fzf_aws_key" run-shell "$_tmux_aws_root/scripts/tmux_aws_fzf.sh"
+	tmux bind -T fzf-menu "$fzf_aws_key" run-shell -b "$_tmux_aws_root/scripts/tmux_aws_fzf.sh"
 }
 
 # Main entry point for tmux-aws plugin

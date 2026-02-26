@@ -7,10 +7,6 @@
 
 _tmux_aws_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=tmux_core.sh
-[[ -f "$_tmux_aws_source_dir/tmux_core.sh" ]] || {
-	echo "tmux-aws: missing tmux_core.sh" >&2
-	exit 1
-}
 source "$_tmux_aws_source_dir/tmux_core.sh"
 
 # Get configured vault executable path
@@ -65,7 +61,7 @@ _tmux_display_message() {
 		message="$message ($details)"
 	fi
 
-	tmux display-message -C "$message"
+	tmux display-message "$message"
 }
 
 # Execute an interactive shell in a tmux window configured for an AWS profile
@@ -354,7 +350,6 @@ _tmux_auth_session() {
 	fi
 
 	tmux display-message "AWS: authenticating session as '$aws_profile'..."
-
 	# Use aws-vault-compatible interface: exec <profile> -- <command>
 	if ! "$aws_vault_path" exec "$aws_profile" -- \
 		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile"; then
