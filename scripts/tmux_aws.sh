@@ -54,15 +54,15 @@ _tmux_display_message() {
 	fi
 
 	if [[ -n "$aws_region" ]]; then
-		details="${details:+$details / }$aws_region"
+		details="${details:+$details, }$aws_region"
 	fi
 
 	if [[ -n "$aws_ttl" ]]; then
-		details="${details:+$details / }$aws_ttl"
+		details="${details:+$details, }$aws_ttl"
 	fi
 
 	if [[ -n "$details" ]]; then
-		message="$message | $details"
+		message="$message ($details)"
 	fi
 
 	tmux display-message -C "$message"
@@ -176,7 +176,7 @@ _tmux_auth_window() {
 
 	# Check if vault executable exists
 	if ! command -v "$aws_vault_path" &>/dev/null; then
-		tmux display-message "AWS: $aws_vault_path not found or not executable"
+		tmux display-message "AWS: vault command not found ($aws_vault_path)"
 		return 1
 	fi
 
@@ -221,12 +221,12 @@ _tmux_new_window() {
 	aws_region="$(_aws_get_option "$aws_profile" "sso_region" "")"
 
 	if [[ -z "$aws_account_id" || -z "$aws_region" ]]; then
-		tmux display-message "AWS: could not determine account or region for '$aws_profile'"
+		tmux display-message "AWS: missing account or region for '$aws_profile'"
 		return 1
 	fi
 
 	if [[ ! "$aws_account_id" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$aws_region" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-		tmux display-message "AWS: invalid characters in account ID or region for '$aws_profile'"
+		tmux display-message "AWS: invalid account or region for '$aws_profile'"
 		return 1
 	fi
 
@@ -349,7 +349,7 @@ _tmux_auth_session() {
 
 	# Check if vault executable exists
 	if ! command -v "$aws_vault_path" &>/dev/null; then
-		tmux display-message "AWS: $aws_vault_path not found or not executable"
+		tmux display-message "AWS: vault command not found ($aws_vault_path)"
 		return 1
 	fi
 
@@ -541,12 +541,12 @@ _tmux_new_session() {
 	aws_region="$(_aws_get_option "$aws_profile" "sso_region" "")"
 
 	if [[ -z "$aws_account_id" || -z "$aws_region" ]]; then
-		tmux display-message "AWS: could not determine account or region for '$aws_profile'"
+		tmux display-message "AWS: missing account or region for '$aws_profile'"
 		return 1
 	fi
 
 	if [[ ! "$aws_account_id" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$aws_region" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-		tmux display-message "AWS: invalid characters in account ID or region for '$aws_profile'"
+		tmux display-message "AWS: invalid account or region for '$aws_profile'"
 		return 1
 	fi
 
