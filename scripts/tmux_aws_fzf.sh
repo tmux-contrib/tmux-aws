@@ -25,7 +25,7 @@ fi
 # alt-s: Authenticate current session with selected profile
 aws fzf --tmux \
 	--bind "alt-c:become($_source_dir/tmux_aws.sh new-window --profile {1})" \
-	--bind "alt-C:execute($_source_dir/tmux_aws.sh new-session --profile {1})" \
-	--bind "alt-w:execute($_source_dir/tmux_aws.sh auth-window --profile {1})" \
-	--bind "alt-s:execute($_source_dir/tmux_aws.sh auth-session --profile {1})" \
+	--bind "alt-C:become($_source_dir/tmux_aws.sh new-session --profile {1})" \
+	--bind "alt-w:become($_source_dir/tmux_aws.sh auth-window --profile {1})" \
+	--bind "alt-s:become($_source_dir/tmux_aws.sh auth-session --profile {1})" \
 	sso profile list >/dev/null || true
