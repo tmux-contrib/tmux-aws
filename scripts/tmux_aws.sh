@@ -40,7 +40,7 @@ _tmux_get_aws_env_regex() {
 #   $3 - AWS account ID (may be empty)
 #   $4 - AWS region (may be empty)
 #   $5 - credential TTL (may be empty)
-_tmux_display_auth_message() {
+_tmux_display_message() {
 	local scope="$1"
 	local aws_profile="$2"
 	local aws_account_id="$3"
@@ -141,7 +141,8 @@ _tmux_exec_window() {
 	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
 		aws_ttl="$(_tmux_get_window_option "$aws_window" "@aws_credential_ttl")"
 	fi
-	_tmux_display_auth_message "window" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
+
+	_tmux_display_message "window" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
 
 	"$SHELL" -i
 }
@@ -311,7 +312,8 @@ _tmux_exec_session() {
 	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
 		aws_ttl="$(_tmux_get_session_option "$session_name" "@aws_credential_ttl")"
 	fi
-	_tmux_display_auth_message "session" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
+
+	_tmux_display_message "session" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
 
 	"$SHELL" -i
 }
