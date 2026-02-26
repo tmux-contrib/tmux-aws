@@ -152,9 +152,9 @@ _tmux_exec_window() {
 		aws_ttl="$(_tmux_get_window_option "$aws_window" "@aws_credential_ttl")"
 	fi
 
-	"$SHELL" -i
-
 	_tmux_display_message "window" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
+
+	"$SHELL" -i
 }
 
 # Authenticate current tmux window with AWS profile configuration
@@ -322,9 +322,9 @@ _tmux_exec_session() {
 		aws_ttl="$(_tmux_get_session_option "$session_name" "@aws_credential_ttl")"
 	fi
 
-	"$SHELL" -i
-
 	_tmux_display_message "session" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
+
+	"$SHELL" -i
 }
 
 # Authenticate current tmux session with AWS profile configuration
