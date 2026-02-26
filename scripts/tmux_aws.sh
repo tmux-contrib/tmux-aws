@@ -56,17 +56,22 @@ _tmux_display_message() {
 	local aws_ttl="$5"
 
 	local message="AWS [$scope]: $aws_profile"
+	local details=""
 
 	if [[ -n "$aws_account_id" ]]; then
-		message="$message · $aws_account_id"
+		details="$aws_account_id"
 	fi
 
 	if [[ -n "$aws_region" ]]; then
-		message="$message · $aws_region"
+		details="${details:+$details · }$aws_region"
 	fi
 
 	if [[ -n "$aws_ttl" ]]; then
-		message="$message · $aws_ttl"
+		details="${details:+$details · }$aws_ttl"
+	fi
+
+	if [[ -n "$details" ]]; then
+		message="$message  $details"
 	fi
 
 	tmux display-message "$message"
