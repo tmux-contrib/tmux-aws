@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
 _source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[[ -f "$_source_dir/tmux_core.sh" ]] || { echo "tmux-aws: missing tmux_core.sh" >&2; exit 1; }
+[[ -f "$_source_dir/tmux_core.sh" ]] || {
+	echo "tmux-aws: missing tmux_core.sh" >&2
+	exit 1
+}
 source "$_source_dir/tmux_core.sh"
 
 # Check aws-fzf availability
@@ -22,7 +25,7 @@ fi
 # alt-s: Authenticate current session with selected profile
 aws fzf --tmux \
 	--bind "alt-c:become($_source_dir/tmux_aws.sh new-window --profile {1})" \
-	--bind "alt-C:become($_source_dir/tmux_aws.sh new-session --profile {1})" \
-	--bind "alt-w:become($_source_dir/tmux_aws.sh auth-window --profile {1})" \
-	--bind "alt-s:become($_source_dir/tmux_aws.sh auth-session --profile {1})" \
+	--bind "alt-C:execute($_source_dir/tmux_aws.sh new-session --profile {1})" \
+	--bind "alt-w:execute($_source_dir/tmux_aws.sh auth-window --profile {1})" \
+	--bind "alt-s:execute($_source_dir/tmux_aws.sh auth-session --profile {1})" \
 	sso profile list >/dev/null || true
