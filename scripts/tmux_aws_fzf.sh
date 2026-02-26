@@ -9,16 +9,16 @@ source "$_source_dir/tmux_core.sh"
 
 # Check aws-fzf availability
 if ! command -v aws &>/dev/null; then
-	tmux display-message "AWS: aws-cli is not installed"
+	tmux display-message " AWS: aws-cli is not installed"
 	exit 1
 fi
 
 if ! aws fzf --help &>/dev/null 2>&1; then
-	tmux display-message "AWS: aws-fzf plugin is not installed"
+	tmux display-message " AWS: aws-fzf plugin is not installed"
 	exit 1
 fi
 
-tmux display-message "AWS: loading profiles..."
+tmux display-message " AWS: loading profiles..."
 
 # Launch aws-fzf with tmux-aws keybindings
 # alt-c: Create new window with selected profile
