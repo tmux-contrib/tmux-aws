@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 
-[ -z "$DEBUG" ] || { set -x; set -e; }
+[ -z "$DEBUG" ] || {
+	set -x
+	set -e
+}
 
 _tmux_aws_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=tmux_core.sh
-[[ -f "$_tmux_aws_source_dir/tmux_core.sh" ]] || { echo "tmux-aws: missing tmux_core.sh" >&2; exit 1; }
+[[ -f "$_tmux_aws_source_dir/tmux_core.sh" ]] || {
+	echo "tmux-aws: missing tmux_core.sh" >&2
+	exit 1
+}
 source "$_tmux_aws_source_dir/tmux_core.sh"
 
 # Get configured vault executable path
@@ -24,6 +30,42 @@ _tmux_get_aws_env_regex() {
 	local aws_env_regex
 	aws_env_regex="$(tmux show-option -gqv @tmux-aws-env-regex)"
 	echo "${aws_env_regex:-^AWS_}"
+}
+
+# Display an authenticated message with available details
+#
+# Arguments:
+#   $1 - scope ("window" or "session")
+#   $2 - AWS profile name
+#   $3 - AWS account ID (may be empty)
+#   $4 - AWS region (may be empty)
+#   $5 - credential TTL (may be empty)
+_tmux_display_auth_message() {
+	local scope="$1"
+	local aws_profile="$2"
+	local aws_account_id="$3"
+	local aws_region="$4"
+	local aws_ttl="$5"
+
+	local message="AWS: authenticated $scope as '$aws_profile'"
+	local details=""
+	if [[ -n "$aws_account_id" ]]; then
+		details="$aws_account_id"
+	fi
+
+	if [[ -n "$aws_region" ]]; then
+		details="${details:+$details / }$aws_region"
+	fi
+
+	if [[ -n "$aws_ttl" ]]; then
+		details="${details:+$details / }$aws_ttl"
+	fi
+
+	if [[ -n "$details" ]]; then
+		message="$message ($details)"
+	fi
+
+	tmux display-message "$message"
 }
 
 # Execute an interactive shell in a tmux window configured for an AWS profile
@@ -83,14 +125,23 @@ _tmux_exec_window() {
 	fi
 
 	# Set AWS account ID if available
-	if [[ -n "${AWS_ACCOUNT_ID:-}" ]]; then
-		_tmux_set_window_option "$aws_window" "@aws_account_id" "$AWS_ACCOUNT_ID"
+	local aws_account_id="${AWS_ACCOUNT_ID:-}"
+	if [[ -n "$aws_account_id" ]]; then
+		_tmux_set_window_option "$aws_window" "@aws_account_id" "$aws_account_id"
 	fi
 
 	# Set AWS region if available
-	if [[ -n "${AWS_REGION:-}" ]]; then
-		_tmux_set_window_option "$aws_window" "@aws_region" "$AWS_REGION"
+	local aws_region="${AWS_REGION:-}"
+	if [[ -n "$aws_region" ]]; then
+		_tmux_set_window_option "$aws_window" "@aws_region" "$aws_region"
 	fi
+
+	# Display authenticated message with available details
+	local aws_ttl=""
+	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
+		aws_ttl="$(_tmux_get_window_option "$aws_window" "@aws_credential_ttl")"
+	fi
+	_tmux_display_auth_message "window" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
 
 	"$SHELL" -i
 }
@@ -124,14 +175,18 @@ _tmux_auth_window() {
 
 	# Check if vault executable exists
 	if ! command -v "$aws_vault_path" &>/dev/null; then
-		echo "ERROR: $aws_vault_path not found or not executable" >&2
-		echo "Configure with: set -g @tmux-aws-vault-path '<path>'" >&2
+		tmux display-message "AWS: $aws_vault_path not found or not executable"
 		return 1
 	fi
 
+	tmux display-message "AWS: authenticating window as '$aws_profile'..."
+
 	# Use aws-vault-compatible interface: exec <profile> -- <command>
-	"$aws_vault_path" exec "$aws_profile" -- \
-		"$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile"
+	if ! "$aws_vault_path" exec "$aws_profile" -- \
+		"$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile"; then
+		tmux display-message "AWS: authentication failed for '$aws_profile'"
+		return 1
+	fi
 }
 
 # Create a new tmux window with AWS profile configuration
@@ -165,12 +220,12 @@ _tmux_new_window() {
 	aws_region="$(_aws_get_option "$aws_profile" "sso_region" "")"
 
 	if [[ -z "$aws_account_id" || -z "$aws_region" ]]; then
-		echo "ERROR: Could not determine account ID or region for profile '$aws_profile'" >&2
+		tmux display-message "AWS: could not determine account or region for '$aws_profile'"
 		return 1
 	fi
 
 	if [[ ! "$aws_account_id" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$aws_region" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-		echo "ERROR: Invalid characters in account ID '$aws_account_id' or region '$aws_region'" >&2
+		tmux display-message "AWS: invalid characters in account ID or region for '$aws_profile'"
 		return 1
 	fi
 
@@ -240,14 +295,23 @@ _tmux_exec_session() {
 	fi
 
 	# Set AWS account ID if available
-	if [[ -n "${AWS_ACCOUNT_ID:-}" ]]; then
-		_tmux_set_session_option "$session_name" "@aws_account_id" "$AWS_ACCOUNT_ID"
+	local aws_account_id="${AWS_ACCOUNT_ID:-}"
+	if [[ -n "$aws_account_id" ]]; then
+		_tmux_set_session_option "$session_name" "@aws_account_id" "$aws_account_id"
 	fi
 
 	# Set AWS region if available
-	if [[ -n "${AWS_REGION:-}" ]]; then
-		_tmux_set_session_option "$session_name" "@aws_region" "$AWS_REGION"
+	local aws_region="${AWS_REGION:-}"
+	if [[ -n "$aws_region" ]]; then
+		_tmux_set_session_option "$session_name" "@aws_region" "$aws_region"
 	fi
+
+	# Display authenticated message with available details
+	local aws_ttl=""
+	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
+		aws_ttl="$(_tmux_get_session_option "$session_name" "@aws_credential_ttl")"
+	fi
+	_tmux_display_auth_message "session" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
 
 	"$SHELL" -i
 }
@@ -283,14 +347,18 @@ _tmux_auth_session() {
 
 	# Check if vault executable exists
 	if ! command -v "$aws_vault_path" &>/dev/null; then
-		echo "ERROR: $aws_vault_path not found or not executable" >&2
-		echo "Configure with: set -g @tmux-aws-vault-path '<path>'" >&2
+		tmux display-message "AWS: $aws_vault_path not found or not executable"
 		return 1
 	fi
 
+	tmux display-message "AWS: authenticating session as '$aws_profile'..."
+
 	# Use aws-vault-compatible interface: exec <profile> -- <command>
-	"$aws_vault_path" exec "$aws_profile" -- \
-		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile"
+	if ! "$aws_vault_path" exec "$aws_profile" -- \
+		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile"; then
+		tmux display-message "AWS: authentication failed for '$aws_profile'"
+		return 1
+	fi
 }
 
 # Get session-level AWS information
@@ -314,7 +382,7 @@ _tmux_get_session() {
 			target="$1"
 			shift
 			;;
-		profile|ttl|account-id|region)
+		profile | ttl | account-id | region)
 			what="$1"
 			shift
 			;;
@@ -387,7 +455,7 @@ _tmux_get_window() {
 			target="$1"
 			shift
 			;;
-		profile|ttl|account-id|region)
+		profile | ttl | account-id | region)
 			what="$1"
 			shift
 			;;
@@ -471,18 +539,19 @@ _tmux_new_session() {
 	aws_region="$(_aws_get_option "$aws_profile" "sso_region" "")"
 
 	if [[ -z "$aws_account_id" || -z "$aws_region" ]]; then
-		echo "ERROR: Could not determine account ID or region for profile '$aws_profile'" >&2
+		tmux display-message "AWS: could not determine account or region for '$aws_profile'"
 		return 1
 	fi
 
 	if [[ ! "$aws_account_id" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$aws_region" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-		echo "ERROR: Invalid characters in account ID '$aws_account_id' or region '$aws_region'" >&2
+		tmux display-message "AWS: invalid characters in account ID or region for '$aws_profile'"
 		return 1
 	fi
 
 	local session_name="$aws_account_id-$aws_region"
 	# Check if session already exists
 	if tmux has-session -t "$session_name" 2>/dev/null; then
+		tmux display-message "AWS: switching to existing session '$session_name'"
 		# Session exists, switch to it
 		tmux switch-client -t "$session_name" 2>/dev/null || tmux attach -t "$session_name"
 		return
