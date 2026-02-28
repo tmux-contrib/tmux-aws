@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-[ -z "$DEBUG" ] || {
-	set -x
-	set -e
-}
+[[ -z "${DEBUG:-}" ]] || set -x
 
 _tmux_aws_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=tmux_core.sh
@@ -18,8 +16,7 @@ source "$_tmux_aws_source_dir/tmux_core.sh"
 #   Resolved path to the vault executable
 _tmux_get_aws_vault_path() {
 	local aws_vault_path
-	aws_vault_path="$(tmux show-option -gqv @tmux-aws-vault-path)"
-	aws_vault_path="${aws_vault_path:-aws-vault}"
+	aws_vault_path="$(_tmux_get_option "@tmux-aws-vault-path" "aws-vault")"
 
 	# Expand tilde to $HOME if path starts with ~/
 	aws_vault_path="${aws_vault_path/#\~/$HOME}"
@@ -35,9 +32,7 @@ _tmux_get_aws_vault_path() {
 # Outputs:
 #   Regex pattern for matching environment variables to propagate
 _tmux_get_aws_env_regex() {
-	local aws_env_regex
-	aws_env_regex="$(tmux show-option -gqv @tmux-aws-env-regex)"
-	echo "${aws_env_regex:-^AWS_}"
+	_tmux_get_option "@tmux-aws-env-regex" "^AWS_"
 }
 
 # Display an authenticated message with available details
@@ -213,7 +208,7 @@ _tmux_auth_window() {
 
 	# Use aws-vault-compatible interface: exec <profile> -- <command>
 	if ! "$aws_vault_path" exec "$aws_profile" -- \
-		"$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile" $start_shell; then
+		"$_tmux_aws_source_dir/tmux_aws.sh" exec-window --profile "$aws_profile" ${start_shell:+"$start_shell"}; then
 		tmux display-message "AWS: authentication failed for '$aws_profile'"
 		return 1
 	fi
@@ -402,7 +397,7 @@ _tmux_auth_session() {
 	tmux display-message "AWS: authenticating session as '$aws_profile'..."
 	# Use aws-vault-compatible interface: exec <profile> -- <command>
 	if ! "$aws_vault_path" exec "$aws_profile" -- \
-		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile" $start_shell; then
+		"$_tmux_aws_source_dir/tmux_aws.sh" exec-session --profile "$aws_profile" ${start_shell:+"$start_shell"}; then
 		tmux display-message "AWS: authentication failed for '$aws_profile'"
 		return 1
 	fi
@@ -624,11 +619,15 @@ _tmux_new_session() {
 #   auth-window   - Authenticate current tmux window with AWS profile configuration
 #   get-session   - Get session-level AWS information (profile|ttl|account-id|region)
 #   get-window    - Get window-level AWS information (profile|ttl|account-id|region)
+#   --version     - Print version and exit
 main() {
 	local command="${1:-}"
 	shift || true
 
 	case "$command" in
+	--version)
+		cat "$_tmux_aws_source_dir/../version.txt"
+		;;
 	exec-window)
 		_tmux_exec_window "$@"
 		;;
@@ -652,6 +651,11 @@ main() {
 		;;
 	get-window)
 		_tmux_get_window "$@"
+		;;
+	*)
+		echo "tmux-aws: unknown command: $command" >&2
+		echo "Usage: tmux_aws.sh {--version|new-window|auth-window|new-session|auth-session|get-session|get-window}" >&2
+		exit 1
 		;;
 	esac
 }

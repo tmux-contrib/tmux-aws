@@ -37,55 +37,23 @@ Once installed, tmux-aws will automatically enable interactive profile selection
 
 ## Variables
 
-The plugin exposes three variables for flexible scoping:
+The plugin exposes the following variable:
 
 ### @aws_profile
 
-The active AWS profile name (raw string, no processing). Set at both session and window levels.
+The active AWS profile name (raw string, no processing). Set at both session and window levels via tmux's native option scoping.
 
 **Scope**:
 
 - `auth-session` or `new-session`: Sets session-level
 - `auth-window` or `new-window`: Sets window-level
 
-**Precedence**: Window-level overrides session-level when accessed from window context.
-
-**Use when**: You want automatic fallback (window-level first, then session-level).
+**Precedence**: Window-level overrides session-level when accessed from window context (standard tmux option behavior).
 
 ```tmux
 # Shows window-level if set, otherwise session-level
 set -g status-right 'AWS: #{@aws_profile}'
 ```
-
-### @aws_profile_window
-
-Only set by window-level auth commands. Never falls back to session-level.
-
-**Use when**: You want to show AWS profile ONLY for windows with window-specific auth, ignoring session-wide profile.
-
-```tmux
-# Only shows if this specific window has window-level auth
-set -g window-status-format '#I:#W #{?@aws_profile_window,  #{@aws_profile_window},}'
-```
-
-### @aws_profile_session
-
-Only set by session-level auth commands. Never overridden by window-level.
-
-**Use when**: You want to show session-wide AWS profile in status bar, separate from window-specific profiles.
-
-```tmux
-# Shows session-wide profile only
-set -g status-left '#{@aws_profile_session} | '
-```
-
-### Quick Reference
-
-| Variable               | Set by       | Falls back             | Use case                        |
-| ---------------------- | ------------ | ---------------------- | ------------------------------- |
-| `@aws_profile`         | Both         | Yes (window → session) | General use, automatic fallback |
-| `@aws_profile_window`  | Window only  | No                     | Window-specific profiles only   |
-| `@aws_profile_session` | Session only | No                     | Session-wide profile only       |
 
 ## Credential Expiration
 
@@ -93,18 +61,18 @@ When using temporary credentials (via aws-vault or similar tools), the plugin ca
 
 ### Variables
 
-The plugin exposes three TTL variables following the same scoping pattern as profile variables:
+The plugin exposes the `@aws_credential_ttl` variable following the same scoping pattern as `@aws_profile`:
 
 #### @aws_credential_ttl
 
-Shows the time remaining until credentials expire (raw string, human-readable format). Set at both session and window levels.
+Shows the time remaining until credentials expire (raw string, human-readable format). Set at both session and window levels via tmux's native option scoping.
 
 **Scope**:
 
 - `auth-session` or `new-session`: Sets session-level
 - `auth-window` or `new-window`: Sets window-level
 
-**Precedence**: Window-level overrides session-level when accessed from window context.
+**Precedence**: Window-level overrides session-level when accessed from window context (standard tmux option behavior).
 
 **Format**: Uses adaptive display based on time remaining (most compact representation):
 
@@ -122,42 +90,10 @@ Shows the time remaining until credentials expire (raw string, human-readable fo
 - 45 seconds remaining → `45s`
 - Expired credentials → `X`
 
-**Use when**: You want automatic fallback (window-level first, then session-level).
-
 ```tmux
 # Shows window-level TTL if set, otherwise session-level
 set -g status-right 'AWS: #{@aws_profile} [#{@aws_credential_ttl}]'
 ```
-
-#### @aws_credential_ttl_window
-
-Only set by window-level auth commands. Never falls back to session-level.
-
-**Use when**: You want to show TTL ONLY for windows with window-specific auth, ignoring session-wide credentials.
-
-```tmux
-# Only shows if this specific window has window-level auth
-set -g window-status-format '#I:#W #{?@aws_credential_ttl_window,[#{@aws_credential_ttl_window}],}'
-```
-
-#### @aws_credential_ttl_session
-
-Only set by session-level auth commands. Never overridden by window-level.
-
-**Use when**: You want to show session-wide credential expiration in status bar, separate from window-specific credentials.
-
-```tmux
-# Shows session-wide TTL only
-set -g status-left '#{@aws_profile_session} [#{@aws_credential_ttl_session}] | '
-```
-
-### Quick Reference
-
-| Variable                      | Set by       | Falls back             | Use case                        |
-| ----------------------------- | ------------ | ---------------------- | ------------------------------- |
-| `@aws_credential_ttl`         | Both         | Yes (window → session) | General use, automatic fallback |
-| `@aws_credential_ttl_window`  | Window only  | No                     | Window-specific TTL only        |
-| `@aws_credential_ttl_session` | Session only | No                     | Session-wide TTL only           |
 
 ### Dynamic TTL Updates
 
@@ -167,7 +103,7 @@ For **session-level credentials**, you can enable dynamic TTL updates that autom
 
 ```tmux
 # Static - shows TTL at time credentials were loaded
-set -g status-left '#{@aws_credential_ttl_session}'
+set -g status-left '#{@aws_credential_ttl}'
 ```
 
 #### Dynamic TTL (recommended for session-level)
@@ -220,14 +156,14 @@ set -g status-left '#{?aws_profile,AWS: #{aws_profile} [#{aws_account_id}:#{aws_
 
 ### Important Notes
 
-- **Static Display**: Use `#{@aws_credential_ttl_session}` (with `@`) for static TTL calculated once when credentials are loaded
+- **Static Display**: Use `#{@aws_credential_ttl}` (with `@`) for static TTL calculated once when credentials are loaded
 - **Dynamic Display**: Use `#{aws_credential_ttl}` (without `@`, no suffix) for TTL that updates every `status-interval` seconds
 - **Dynamic Profile**: Use `#{aws_profile}` (without `@`) for profile that updates dynamically
 - **Dynamic Account ID & Region**: Use `#{aws_account_id}` and `#{aws_region}` (without `@`) for account and region that update dynamically
 - **Availability**: TTL variables are only set when `AWS_CREDENTIAL_EXPIRATION` is present in the environment
 - **Availability**: Account ID and region variables are only set when `AWS_ACCOUNT_ID` and `AWS_REGION` are present in the environment
 - **Adaptive Format**: Display automatically adjusts based on time remaining (shows most relevant units)
-- **Scope Pattern**: TTL variables follow the same scoping behavior as `@aws_profile*` variables
+- **Scope Pattern**: TTL variables follow the same scoping behavior as `@aws_profile`
 
 ### Example: Complete Status Bar with TTL
 
@@ -297,7 +233,7 @@ set -g status-right '#{?aws_profile,AWS: #{aws_profile} [#{aws_account_id}:#{aws
 - **Dynamic Display**: Use `#{aws_account_id}` and `#{aws_region}` (without `@` prefix) for values that update every `status-interval` seconds
 - **Availability**: These variables are only available when aws-vault (or your credential provider) sets the corresponding environment variables
 - **Scope Pattern**: Account ID and region follow the same scoping behavior as `#{aws_profile}` - window-level values override session-level when accessed from window context
-- Unlike profile and TTL variables, account ID and region don't have explicit `_session` or `_window` variants - use the generic patterns for all cases
+- Account ID and region follow the same scoping pattern as profile and TTL variables
 
 ## Commands
 
@@ -348,6 +284,20 @@ You can also call the `scripts/tmux_aws.sh` script directly with the `--profile`
 ```
 
 This is useful for integrating with other tools like [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum).
+
+### The `--start-shell` Flag
+
+The `auth-window` and `auth-session` commands accept a `--start-shell` flag that starts an interactive shell after authentication completes:
+
+```sh
+# Authenticate and start a shell in the current window
+/path/to/tmux-aws/scripts/tmux_aws.sh auth-window --profile my-dev-profile --start-shell
+
+# Authenticate and start a shell in the current session
+/path/to/tmux-aws/scripts/tmux_aws.sh auth-session --profile my-dev-profile --start-shell
+```
+
+**Note:** The `new-window` and `new-session` commands automatically use `--start-shell`, since the newly created window/session needs a running shell.
 
 ## Usage Examples
 

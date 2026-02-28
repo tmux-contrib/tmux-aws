@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
+[[ -z "${DEBUG:-}" ]] || set -x
 
 _source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [[ -f "$_source_dir/tmux_core.sh" ]] || {

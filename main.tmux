@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-[ -z "$DEBUG" ] || {
-	set -x
-	set -e
-}
+[[ -z "${DEBUG:-}" ]] || set -x
 
 _tmux_aws_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/tmux_core.sh
@@ -29,18 +27,6 @@ aws_account_id_window_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-w
 # Region patterns
 aws_region_session_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-session region)"
 aws_region_window_interpolation="#($_tmux_aws_root/scripts/tmux_aws.sh get-window region)"
-
-# Set a tmux option with proper quoting for nested commands
-#
-# Arguments:
-#   $1 - The name of the tmux option to set
-#   $2 - The value to set
-_tmux_set_option() {
-	local option="$1"
-	local value="$2"
-
-	tmux set-option -g "$option" "$value"
-}
 
 # Interpolate AWS patterns for session-level options
 #

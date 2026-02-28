@@ -58,6 +58,18 @@ _tmux_get_window_option() {
 	echo "${value:-$default}"
 }
 
+# Set tmux global option
+#
+# Arguments:
+#   $1 - option name
+#   $2 - option value
+_tmux_set_option() {
+	local option="$1"
+	local value="$2"
+
+	tmux set-option -g "$option" "$value"
+}
+
 # Set tmux session option
 #
 # Arguments:
@@ -181,7 +193,7 @@ _time_get_duration() {
 #     1-24 hours:  "6h 45m" (hours and minutes)
 #     1-60 min:    "30m 15s" (minutes and seconds)
 #     < 1 minute:  "45s" (seconds only)
-#     Expired:     "EXPIRED"
+#     Expired:     "X"
 _time_format_duration() {
 	local duration="$1"
 	[[ -z "$duration" ]] && return
