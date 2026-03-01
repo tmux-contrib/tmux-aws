@@ -3,12 +3,15 @@ set -euo pipefail
 
 [[ -z "${DEBUG:-}" ]] || set -x
 
-_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[[ -f "$_source_dir/tmux_core.sh" ]] || {
+_tmux_aws_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+[[ -f "$_tmux_aws_source_dir/tmux_core.sh" ]] || {
 	echo "tmux-aws: missing tmux_core.sh" >&2
 	exit 1
 }
-source "$_source_dir/tmux_core.sh"
+
+# shellcheck source=tmux_core.sh
+source "$_tmux_aws_source_dir/tmux_core.sh"
 
 # Check aws-fzf availability
 if ! command -v aws &>/dev/null; then
@@ -27,8 +30,8 @@ fi
 # alt-w: Authenticate current window with selected profile
 # alt-s: Authenticate current session with selected profile
 aws fzf --tmux \
-	--bind "alt-c:become($_source_dir/tmux_aws.sh new-window --profile {1})" \
-	--bind "alt-C:become($_source_dir/tmux_aws.sh new-session --profile {1})" \
-	--bind "alt-w:become($_source_dir/tmux_aws.sh auth-window --profile {1})" \
-	--bind "alt-s:become($_source_dir/tmux_aws.sh auth-session --profile {1})" \
+	--bind "alt-c:become($_tmux_aws_source_dir/tmux_aws.sh new-window --profile {1})" \
+	--bind "alt-C:become($_tmux_aws_source_dir/tmux_aws.sh new-session --profile {1})" \
+	--bind "alt-w:become($_tmux_aws_source_dir/tmux_aws.sh auth-window --profile {1})" \
+	--bind "alt-s:become($_tmux_aws_source_dir/tmux_aws.sh auth-session --profile {1})" \
 	sso profile list >/dev/null || true

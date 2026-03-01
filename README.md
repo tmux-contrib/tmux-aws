@@ -486,6 +486,32 @@ set -g @tmux-aws-vault-path 'aws-vault.sh'
 set -g @tmux-aws-env-regex '^(AWS_|TF_)'
 ```
 
+## Development
+
+### Prerequisites
+
+Install dependencies using [Nix](https://nixos.org/):
+
+```sh
+nix develop
+```
+
+Or install manually: `bash`, `tmux`, `aws-cli`, `aws-vault`, `fzf`, `bats`
+
+### Running Tests
+
+```sh
+bats tests/
+```
+
+### Debugging
+
+Enable trace output with the `DEBUG` environment variable:
+
+```sh
+DEBUG=1 /path/to/tmux-aws/scripts/tmux_aws.sh --version
+```
+
 ## License
 
 MIT

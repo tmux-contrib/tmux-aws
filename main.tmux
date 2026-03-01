@@ -4,11 +4,13 @@ set -euo pipefail
 [[ -z "${DEBUG:-}" ]] || set -x
 
 _tmux_aws_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=scripts/tmux_core.sh
+
 [[ -f "$_tmux_aws_root/scripts/tmux_core.sh" ]] || {
 	echo "tmux-aws: missing tmux_core.sh" >&2
 	exit 1
 }
+
+# shellcheck source=scripts/tmux_core.sh
 source "$_tmux_aws_root/scripts/tmux_core.sh"
 
 # Define interpolation patterns for dynamic updates
