@@ -1,6 +1,6 @@
 # tmux-aws
 
-A `tmux` plugin that exposes AWS profile context as a tmux variable. Pure data passthrough - you control all styling and parsing.
+Display your active AWS profile and region in the tmux status bar — SSO & MFA friendly. Pure data passthrough, you control all styling and parsing.
 
 ## Dependencies
 
