@@ -15,14 +15,14 @@ source "$_tmux_aws_source_dir/tmux_core.sh"
 
 # Get configured vault executable path
 #
-# Reads @tmux-aws-vault-path from tmux global options.
+# Reads @aws-vault-path from tmux global options.
 # Falls back to "aws-vault" if unset. Expands leading ~/ to $HOME.
 #
 # Outputs:
 #   Resolved path to the vault executable
 _tmux_get_aws_vault_path() {
 	local aws_vault_path
-	aws_vault_path="$(_tmux_get_option "@tmux-aws-vault-path" "aws-vault")"
+	aws_vault_path="$(_tmux_get_option "@aws-vault-path" "aws-vault")"
 
 	# Expand tilde to $HOME if path starts with ~/
 	aws_vault_path="${aws_vault_path/#\~/$HOME}"
@@ -32,13 +32,13 @@ _tmux_get_aws_vault_path() {
 
 # Get environment variable regex pattern
 #
-# Reads @tmux-aws-env-regex from tmux global options.
+# Reads @aws-env-regex from tmux global options.
 # Falls back to "^AWS_" if unset.
 #
 # Outputs:
 #   Regex pattern for matching environment variables to propagate
 _tmux_get_aws_env_regex() {
-	_tmux_get_option "@tmux-aws-env-regex" "^AWS_"
+	_tmux_get_option "@aws-env-regex" "^AWS_"
 }
 
 # Display an authenticated message with available details
@@ -85,8 +85,8 @@ _tmux_display_message() {
 #   --window  - (Optional) Target window in format "session:index" (e.g., "mysession:0")
 #               If not provided, defaults to the current window
 # Side effects:
-#   Sets window variables (@aws_profile, @aws_credential_expiration, @aws_credential_ttl,
-#   @aws_account_id, @aws_region) for the specified or current window, then launches an
+#   Sets window variables (@aws-profile, @aws-credential-expiration, @aws-credential-ttl,
+#   @aws-account-id, @aws-region) for the specified or current window, then launches an
 #   interactive shell. Displays an authenticated summary on shell exit.
 _tmux_exec_window() {
 	local aws_profile=""
@@ -122,12 +122,12 @@ _tmux_exec_window() {
 	fi
 
 	# Set window variables for user consumption
-	_tmux_set_window_option "$aws_window" "@aws_profile" "$aws_profile"
+	_tmux_set_window_option "$aws_window" "@aws-profile" "$aws_profile"
 
 	# Set credential expiration variables
 	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
 		# Store raw ISO8601 timestamp for dynamic calculation
-		_tmux_set_window_option "$aws_window" "@aws_credential_expiration" "$AWS_CREDENTIAL_EXPIRATION"
+		_tmux_set_window_option "$aws_window" "@aws-credential-expiration" "$AWS_CREDENTIAL_EXPIRATION"
 
 		# Also calculate initial formatted TTL (for backwards compatibility)
 		local duration
@@ -137,26 +137,26 @@ _tmux_exec_window() {
 			local duration_ttl
 			duration_ttl="$(_time_format_duration "$duration")"
 
-			_tmux_set_window_option "$aws_window" "@aws_credential_ttl" "$duration_ttl"
+			_tmux_set_window_option "$aws_window" "@aws-credential-ttl" "$duration_ttl"
 		fi
 	fi
 
 	# Set AWS account ID if available
 	local aws_account_id="${AWS_ACCOUNT_ID:-}"
 	if [[ -n "$aws_account_id" ]]; then
-		_tmux_set_window_option "$aws_window" "@aws_account_id" "$aws_account_id"
+		_tmux_set_window_option "$aws_window" "@aws-account-id" "$aws_account_id"
 	fi
 
 	# Set AWS region if available
 	local aws_region="${AWS_REGION:-}"
 	if [[ -n "$aws_region" ]]; then
-		_tmux_set_window_option "$aws_window" "@aws_region" "$aws_region"
+		_tmux_set_window_option "$aws_window" "@aws-region" "$aws_region"
 	fi
 
 	# Display authenticated message with available details
 	local aws_ttl=""
 	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
-		aws_ttl="$(_tmux_get_window_option "$aws_window" "@aws_credential_ttl")"
+		aws_ttl="$(_tmux_get_window_option "$aws_window" "@aws-credential-ttl")"
 	fi
 
 	_tmux_display_message "window" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
@@ -310,12 +310,12 @@ _tmux_exec_session() {
 	done < <(env -0)
 
 	# Set session variables for user consumption
-	_tmux_set_session_option "$session_name" "@aws_profile" "$aws_profile"
+	_tmux_set_session_option "$session_name" "@aws-profile" "$aws_profile"
 
 	# Set credential expiration variables
 	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
 		# Store raw ISO8601 timestamp for dynamic calculation
-		_tmux_set_session_option "$session_name" "@aws_credential_expiration" "$AWS_CREDENTIAL_EXPIRATION"
+		_tmux_set_session_option "$session_name" "@aws-credential-expiration" "$AWS_CREDENTIAL_EXPIRATION"
 
 		# Also calculate initial formatted TTL (for backwards compatibility)
 		local duration
@@ -325,26 +325,26 @@ _tmux_exec_session() {
 			local duration_ttl
 			duration_ttl="$(_time_format_duration "$duration")"
 
-			_tmux_set_session_option "$session_name" "@aws_credential_ttl" "$duration_ttl"
+			_tmux_set_session_option "$session_name" "@aws-credential-ttl" "$duration_ttl"
 		fi
 	fi
 
 	# Set AWS account ID if available
 	local aws_account_id="${AWS_ACCOUNT_ID:-}"
 	if [[ -n "$aws_account_id" ]]; then
-		_tmux_set_session_option "$session_name" "@aws_account_id" "$aws_account_id"
+		_tmux_set_session_option "$session_name" "@aws-account-id" "$aws_account_id"
 	fi
 
 	# Set AWS region if available
 	local aws_region="${AWS_REGION:-}"
 	if [[ -n "$aws_region" ]]; then
-		_tmux_set_session_option "$session_name" "@aws_region" "$aws_region"
+		_tmux_set_session_option "$session_name" "@aws-region" "$aws_region"
 	fi
 
 	# Display authenticated message with available details
 	local aws_ttl=""
 	if [[ -n "${AWS_CREDENTIAL_EXPIRATION:-}" ]]; then
-		aws_ttl="$(_tmux_get_session_option "$session_name" "@aws_credential_ttl")"
+		aws_ttl="$(_tmux_get_session_option "$session_name" "@aws-credential-ttl")"
 	fi
 
 	_tmux_display_message "session" "$aws_profile" "$aws_account_id" "$aws_region" "$aws_ttl"
@@ -448,14 +448,14 @@ _tmux_get_session() {
 	case "$what" in
 	profile)
 		local profile
-		profile="$(_tmux_get_session_option "$target" "@aws_profile")"
+		profile="$(_tmux_get_session_option "$target" "@aws-profile")"
 		if [[ -n "$profile" ]]; then
 			echo "$profile"
 		fi
 		;;
 	ttl)
 		local expiration
-		expiration="$(_tmux_get_session_option "$target" "@aws_credential_expiration")"
+		expiration="$(_tmux_get_session_option "$target" "@aws-credential-expiration")"
 		if [[ -n "$expiration" ]]; then
 			local duration
 			duration="$(_time_get_duration "$expiration")"
@@ -466,14 +466,14 @@ _tmux_get_session() {
 		;;
 	account-id)
 		local account_id
-		account_id="$(_tmux_get_session_option "$target" "@aws_account_id")"
+		account_id="$(_tmux_get_session_option "$target" "@aws-account-id")"
 		if [[ -n "$account_id" ]]; then
 			echo "$account_id"
 		fi
 		;;
 	region)
 		local region
-		region="$(_tmux_get_session_option "$target" "@aws_region")"
+		region="$(_tmux_get_session_option "$target" "@aws-region")"
 		if [[ -n "$region" ]]; then
 			echo "$region"
 		fi
@@ -520,14 +520,14 @@ _tmux_get_window() {
 	case "$what" in
 	profile)
 		local profile
-		profile="$(_tmux_get_window_option "$target" "@aws_profile")"
+		profile="$(_tmux_get_window_option "$target" "@aws-profile")"
 		if [[ -n "$profile" ]]; then
 			echo "$profile"
 		fi
 		;;
 	ttl)
 		local expiration
-		expiration="$(_tmux_get_window_option "$target" "@aws_credential_expiration")"
+		expiration="$(_tmux_get_window_option "$target" "@aws-credential-expiration")"
 		if [[ -n "$expiration" ]]; then
 			local duration
 			duration="$(_time_get_duration "$expiration")"
@@ -538,14 +538,14 @@ _tmux_get_window() {
 		;;
 	account-id)
 		local account_id
-		account_id="$(_tmux_get_window_option "$target" "@aws_account_id")"
+		account_id="$(_tmux_get_window_option "$target" "@aws-account-id")"
 		if [[ -n "$account_id" ]]; then
 			echo "$account_id"
 		fi
 		;;
 	region)
 		local region
-		region="$(_tmux_get_window_option "$target" "@aws_region")"
+		region="$(_tmux_get_window_option "$target" "@aws-region")"
 		if [[ -n "$region" ]]; then
 			echo "$region"
 		fi

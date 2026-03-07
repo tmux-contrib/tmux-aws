@@ -39,7 +39,7 @@ Once installed, tmux-aws will automatically enable interactive profile selection
 
 The plugin exposes the following variable:
 
-### @aws_profile
+### @aws-profile
 
 The active AWS profile name (raw string, no processing). Set at both session and window levels via tmux's native option scoping.
 
@@ -52,7 +52,7 @@ The active AWS profile name (raw string, no processing). Set at both session and
 
 ```tmux
 # Shows window-level if set, otherwise session-level
-set -g status-right 'AWS: #{@aws_profile}'
+set -g status-right 'AWS: #{@aws-profile}'
 ```
 
 ## Credential Expiration
@@ -61,9 +61,9 @@ When using temporary credentials (via aws-vault or similar tools), the plugin ca
 
 ### Variables
 
-The plugin exposes the `@aws_credential_ttl` variable following the same scoping pattern as `@aws_profile`:
+The plugin exposes the `@aws-credential-ttl` variable following the same scoping pattern as `@aws-profile`:
 
-#### @aws_credential_ttl
+#### @aws-credential-ttl
 
 Shows the time remaining until credentials expire (raw string, human-readable format). Set at both session and window levels via tmux's native option scoping.
 
@@ -92,7 +92,7 @@ Shows the time remaining until credentials expire (raw string, human-readable fo
 
 ```tmux
 # Shows window-level TTL if set, otherwise session-level
-set -g status-right 'AWS: #{@aws_profile} [#{@aws_credential_ttl}]'
+set -g status-right 'AWS: #{@aws-profile} [#{@aws-credential-ttl}]'
 ```
 
 ### Dynamic TTL Updates
@@ -103,7 +103,7 @@ For **session-level credentials**, you can enable dynamic TTL updates that autom
 
 ```tmux
 # Static - shows TTL at time credentials were loaded
-set -g status-left '#{@aws_credential_ttl}'
+set -g status-left '#{@aws-credential-ttl}'
 ```
 
 #### Dynamic TTL (recommended for session-level)
@@ -156,23 +156,23 @@ set -g status-left '#{?aws_profile,AWS: #{aws_profile} [#{aws_account_id}:#{aws_
 
 ### Important Notes
 
-- **Static Display**: Use `#{@aws_credential_ttl}` (with `@`) for static TTL calculated once when credentials are loaded
+- **Static Display**: Use `#{@aws-credential-ttl}` (with `@`) for static TTL calculated once when credentials are loaded
 - **Dynamic Display**: Use `#{aws_credential_ttl}` (without `@`, no suffix) for TTL that updates every `status-interval` seconds
 - **Dynamic Profile**: Use `#{aws_profile}` (without `@`) for profile that updates dynamically
 - **Dynamic Account ID & Region**: Use `#{aws_account_id}` and `#{aws_region}` (without `@`) for account and region that update dynamically
 - **Availability**: TTL variables are only set when `AWS_CREDENTIAL_EXPIRATION` is present in the environment
 - **Availability**: Account ID and region variables are only set when `AWS_ACCOUNT_ID` and `AWS_REGION` are present in the environment
 - **Adaptive Format**: Display automatically adjusts based on time remaining (shows most relevant units)
-- **Scope Pattern**: TTL variables follow the same scoping behavior as `@aws_profile`
+- **Scope Pattern**: TTL variables follow the same scoping behavior as `@aws-profile`
 
 ### Example: Complete Status Bar with TTL
 
 ```tmux
 # Show profile and TTL in status bar
-set -g status-right 'AWS: #{@aws_profile} [#{aws_account_id}:#{aws_region}] #{@aws_credential_ttl} | %H:%M'
+set -g status-right 'AWS: #{@aws-profile} [#{aws_account_id}:#{aws_region}] #{@aws-credential-ttl} | %H:%M'
 
 # Color status bar based on TTL (advanced)
-if-shell '[ "$(tmux show-option -gqv @aws_credential_ttl)" = "X" ]' \
+if-shell '[ "$(tmux show-option -gqv @aws-credential-ttl)" = "X" ]' \
     'set -g status-style "fg=white,bg=red,bold"'
 ```
 
@@ -301,14 +301,14 @@ The `auth-window` and `auth-session` commands accept a `--start-shell` flag that
 
 ## Usage Examples
 
-The plugin only sets `@aws_profile`. Here's how to use it for styling and parsing:
+The plugin only sets `@aws-profile`. Here's how to use it for styling and parsing:
 
 ### Example 1: Simple Status Bar
 
 Just show the profile:
 
 ```tmux
-set -g status-right 'AWS: #{@aws_profile}'
+set -g status-right 'AWS: #{@aws-profile}'
 ```
 
 ### Example 2: Parse Environment from Profile Name
@@ -317,15 +317,15 @@ Color status bar based on profile name patterns:
 
 ```tmux
 # Red for production profiles
-if-shell '[ -n "$(tmux show-option -gqv @aws_profile | grep -i prod)" ]' \
+if-shell '[ -n "$(tmux show-option -gqv @aws-profile | grep -i prod)" ]' \
     'set -g status-style "fg=white,bg=red,bold"'
 
 # Yellow for dev profiles
-if-shell '[ -n "$(tmux show-option -gqv @aws_profile | grep -i dev)" ]' \
+if-shell '[ -n "$(tmux show-option -gqv @aws-profile | grep -i dev)" ]' \
     'set -g status-style "fg=black,bg=yellow"'
 
 # Orange for staging profiles
-if-shell '[ -n "$(tmux show-option -gqv @aws_profile | grep -i stage)" ]' \
+if-shell '[ -n "$(tmux show-option -gqv @aws-profile | grep -i stage)" ]' \
     'set -g status-style "fg=black,bg=colour208"'
 ```
 
@@ -335,8 +335,8 @@ Show AWS icon + profile in window status:
 
 ```tmux
 # Show AWS icon and profile in window status
-set -g window-status-format '#I:#W #{?@aws_profile,  #{@aws_profile},}'
-set -g window-status-current-format '#I:#W #{?@aws_profile,  #{@aws_profile},}'
+set -g window-status-format '#I:#W #{?@aws-profile,  #{@aws-profile},}'
+set -g window-status-current-format '#I:#W #{?@aws-profile,  #{@aws-profile},}'
 ```
 
 ### Example 4: Conditional Window Styling
@@ -346,10 +346,10 @@ Color current window based on profile:
 ```tmux
 # This example uses Catppuccin theme colors, but any colors work
 
-if-shell '[ -n "$(tmux show-window-option -qv @aws_profile | grep -i prod)" ]' \
+if-shell '[ -n "$(tmux show-window-option -qv @aws-profile | grep -i prod)" ]' \
     'set -g window-status-current-style "fg=#{@thm_bg},bg=#{@thm_red},bold"'
 
-if-shell '[ -n "$(tmux show-window-option -qv @aws_profile | grep -i dev)" ]' \
+if-shell '[ -n "$(tmux show-window-option -qv @aws-profile | grep -i dev)" ]' \
     'set -g window-status-current-style "fg=#{@thm_bg},bg=#{@thm_yellow},bold"'
 ```
 
@@ -369,10 +369,10 @@ You can parse it in tmux.conf:
 
 ```tmux
 # Parse environment tag from AWS config
-set -g @my_aws_env "#(aws configure get environment --profile $(tmux show-option -gqv @aws_profile) 2>/dev/null || echo 'none')"
+set -g @my_aws_env "#(aws configure get environment --profile $(tmux show-option -gqv @aws-profile) 2>/dev/null || echo 'none')"
 
 # Then use it for styling
-set -g status-right 'AWS: #{@aws_profile} [#{@my_aws_env}]'
+set -g status-right 'AWS: #{@aws-profile} [#{@my_aws_env}]'
 ```
 
 ### Example 6: Replicate v1.x Default Styling
@@ -381,7 +381,7 @@ For users who want the old auto-styling behavior:
 
 ```tmux
 # Helper function to get color based on profile
-set -g @my_aws_color "#(profile=$(tmux show-option -gqv @aws_profile); \
+set -g @my_aws_color "#(profile=$(tmux show-option -gqv @aws-profile); \
   case $profile in \
     *dev*) echo '@thm_yellow' ;; \
     *stage*) echo '@thm_peach' ;; \
@@ -428,10 +428,10 @@ By default, tmux-aws uses [aws-vault](https://github.com/99designs/aws-vault) fo
 
 ```tmux
 # Use aws-vault (default)
-set -g @tmux-aws-vault-path 'aws-vault'
+set -g @aws-vault-path 'aws-vault'
 
 # Use custom wrapper
-set -g @tmux-aws-vault-path 'my-vault-wrapper'
+set -g @aws-vault-path 'my-vault-wrapper'
 ```
 
 **aws-vault interface:** Any tool configured must implement this interface:
@@ -446,10 +446,10 @@ Configure which environment variables to capture:
 
 ```tmux
 # Capture only AWS_* variables (default)
-set -g @tmux-aws-env-regex '^AWS_'
+set -g @aws-env-regex '^AWS_'
 
 # Capture AWS_*, TF_*, and HSDK_* variables
-set -g @tmux-aws-env-regex '^(AWS_|TF_)'
+set -g @aws-env-regex '^(AWS_|TF_)'
 ```
 
 ### Example: AWS Vault Wrapper
@@ -482,8 +482,8 @@ chmod +x /usr/local/bin/aws-vault.sh
 ```
 
 ```tmux
-set -g @tmux-aws-vault-path 'aws-vault.sh'
-set -g @tmux-aws-env-regex '^(AWS_|TF_)'
+set -g @aws-vault-path 'aws-vault.sh'
+set -g @aws-env-regex '^(AWS_|TF_)'
 ```
 
 ## Development
