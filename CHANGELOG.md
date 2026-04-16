@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/tmux-contrib/tmux-aws/compare/v0.2.0...v0.2.1) (2026-04-16)
+
+
+### Bug Fixes
+
+* add postCreateCommand to restore nix volume permissions ([4b36aa5](https://github.com/tmux-contrib/tmux-aws/commit/4b36aa52101cba62ca4a4ffeb43be8605624563f))
+
 ## [0.2.0](https://github.com/tmux-contrib/tmux-aws/compare/v0.1.0...v0.2.0) (2026-02-28)
 
 
