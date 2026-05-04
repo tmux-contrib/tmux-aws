@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/tmux-contrib/tmux-aws/compare/v0.2.1...v0.2.2) (2026-05-04)
+
+
+### Bug Fixes
+
+* **github:** correct action versions in update.yml ([fe4345a](https://github.com/tmux-contrib/tmux-aws/commit/fe4345a43068e1f5a08d852105280aeb9ba3e587))
+
 ## [0.2.1](https://github.com/tmux-contrib/tmux-aws/compare/v0.2.0...v0.2.1) (2026-04-16)
 
 
