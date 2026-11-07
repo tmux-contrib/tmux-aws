@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/tmux-contrib/tmux-aws/compare/v0.2.2...v0.2.3) (2026-11-07)
+
+
+### Bug Fixes
+
+* **ci:** merge with the App token so main gets its CI run ([#42](https://github.com/tmux-contrib/tmux-aws/issues/42)) ([2394212](https://github.com/tmux-contrib/tmux-aws/commit/239421223c14ba3138b287a29d93137c9b2b1b24))
+
 ## [0.2.2](https://github.com/tmux-contrib/tmux-aws/compare/v0.2.1...v0.2.2) (2026-05-04)
 
 
